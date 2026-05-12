@@ -17,6 +17,9 @@
 - `app/infra/queue.py` — `RQClient` (`enqueue_job`).
 - `app/infra/sftp.py` — `SFTPClient` (`connect`, `close`,
   `list_and_download_new_files`).
+- `app/infra/cache.py` — `init_redis_cache(redis_url)` async bootstrap
+  for fastapi-cache2 against a `redis.asyncio` client (added in a
+  follow-up commit on the same branch).
 - `CLAUDE.md` (this repo's AI-orientation doc) and `reports/` directory
   with the standing report template documented in CLAUDE.md §8.
 
@@ -88,6 +91,23 @@
 - **Why:** One container, one volume, one healthcheck — and a cache
   `FLUSHDB` won't take the queue down with it.
 
+### `init_redis_cache` is async and pings Redis at startup.
+
+- **Why:** `FastAPICache.init` itself is sync, but issuing an
+  `await client.ping()` inside the bootstrap lets a missing /
+  unreachable Redis fail the FastAPI startup event loudly. The
+  alternative — lazy connection on first cache read — would let
+  `/healthz` return 200 while every cached route 500s. The
+  refuse-to-start contract in the brief implies we want the former.
+- **`decode_responses=False`** on the async client is deliberate and
+  commented in the module: `RedisBackend` stores pickled bytes; auto-
+  decoding to `str` would corrupt every read.
+- **`CACHE_KEY_PREFIX = "dc-cache"`** centralises the key namespace so
+  ops-time scans (`KEYS "dc-cache:*"`) work without nuking the queue
+  keyspace on logical DB 1. Both `app/infra/queue.py` (DB 0) and this
+  module (DB 1) share the same Redis container; the DB suffix in the
+  URL is the only thing keeping them apart.
+
 ### Host ports bound to `127.0.0.1` only.
 
 - **Why:** A dev laptop on a coffee-shop network shouldn't be exposing
@@ -110,7 +130,8 @@
 | `app/infra/queue.py` | Person D | `payload` envelope contract: must include `"func"`; see RQClient docstring. |
 | `app/infra/sftp.py` | Person D | `connect()` once; `list_and_download_new_files()` is a generator — iterate inside the polling tick, do NOT cache the iterator across ticks. Idempotency on `(batch_id, filename)` is required. |
 | Bucket name `"documents"` | Person B | The future `presigned_url` service-layer code should import the bucket name from `MinioBlobClient.DEFAULT_BUCKET`, not re-string-literal it. |
-| `pyproject.toml` deps | Person A | Add `minio`, `rq`, `redis`, `paramiko` before workers can import my modules. |
+| `pyproject.toml` deps | Person A | Add `minio`, `rq`, `redis`, `paramiko`, `fastapi-cache2` before workers/api can import my modules. |
+| `app/api/main.py` startup | Person B | Call `await init_redis_cache(settings.REDIS_CACHE_URL)` from the FastAPI startup event handler. Must run *before* any router with `@cache` is hit. |
 | Compose secrets vs. Vault | Whoever wires Vault | Compose-level `MINIO_ROOT_USER` / password are dev-only; production paths must resolve from Vault. SECURITY.md will own this story. |
 
 ---
