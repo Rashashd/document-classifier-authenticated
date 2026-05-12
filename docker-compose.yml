@@ -1,0 +1,122 @@
+# =====================================================================
+# Week 6 Document Classifier — local compose stack.
+#
+# This file owns the *infrastructure-only* services that Person C's
+# adapters (app/infra/blob.py, queue.py, sftp.py) talk to during local
+# development. Application services (api, worker, sftp-ingest, migrate)
+# are appended by their owners as their PRs land.
+#
+# Conventions
+# -----------
+#   • Host-only ports are bound to 127.0.0.1 where possible so the dev
+#     stack is not accidentally exposed to the LAN.
+#   • Credentials below are *local-dev only*. In production, every
+#     secret resolves from Vault at app startup (project rule:
+#     `grep -ri 'password' app/` must return zero hits outside Vault
+#     reader code). These compose values are NOT read by `app/`.
+#   • Named volumes are used for state we want to survive a
+#     `docker compose down`, but NOT a `down -v` (which wipes the dev
+#     environment intentionally).
+# =====================================================================
+
+services:
+
+  # -------------------------------------------------------------------
+  # sftp — atmoz/sftp
+  # -------------------------------------------------------------------
+  # The "scanner vendor" drops TIFFs here. The sftp-ingest worker
+  # (owned by Person D) polls /home/scanner/upload via paramiko using
+  # the SFTPClient adapter in app/infra/sftp.py.
+  #
+  # atmoz/sftp user-definition syntax (passed as `command`):
+  #   <user>:<password>[:e][:UID[:GID]][:dir1[,dir2]...]
+  # Empty UID/GID slots mean "let the image pick defaults", and the
+  # final `upload` token tells atmoz/sftp to create /home/scanner/upload
+  # at container start. The poller MUST chdir into that path.
+  # -------------------------------------------------------------------
+  sftp:
+    image: atmoz/sftp:latest
+    container_name: dc_sftp
+    # `scanner` / `password123` matches .env.example. Production swaps
+    # this for a Vault-resolved keypair (no password auth) — see
+    # SECURITY.md once that lands.
+    command: scanner:password123:::upload
+    ports:
+      # Host 2222 → container 22. We pick 2222 to avoid clashing with
+      # the developer's own sshd on port 22.
+      - "127.0.0.1:2222:22"
+    volumes:
+      # Persists drop contents across `compose down`. The poller deletes
+      # remote files after a successful read so this directory stays
+      # bounded in normal operation.
+      - sftp-data:/home/scanner/upload
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # minio — S3-compatible object storage
+  # -------------------------------------------------------------------
+  # MinIO holds:
+  #   • the raw uploaded scans (key: batches/{batch_id}/{filename})
+  #   • the annotated PNG overlays written by the inference worker
+  # The MinioBlobClient in app/infra/blob.py ensures the bucket exists
+  # at startup (default name: "documents").
+  # -------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: dc_minio
+    # Brief: `server /data --console-address ":9001"` exactly as spec'd.
+    command: server /data --console-address ":9001"
+    environment:
+      # Root creds; only the dev stack uses these. The api/worker
+      # containers will read access keys from Vault, not from here.
+      MINIO_ROOT_USER:     admin
+      MINIO_ROOT_PASSWORD: password123
+    ports:
+      - "127.0.0.1:9000:9000"   # S3 API (used by the adapter)
+      - "127.0.0.1:9001:9001"   # Browser console (debug only)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      # `mc ready local` returns OK only once MinIO can accept writes.
+      # The worker containers should `depends_on: condition: service_healthy`.
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------
+  # redis — queue + cache
+  # -------------------------------------------------------------------
+  # Dual-purpose by design (see DECISIONS.md once Person B fills it in):
+  #   • RQ uses Redis as a job queue (RQClient in app/infra/queue.py).
+  #   • fastapi-cache2 uses the same Redis as its cache backend.
+  # We rely on logical-DB separation (db 0 = queue, db 1 = cache) at the
+  # connection-string layer rather than running two redis containers.
+  # -------------------------------------------------------------------
+  redis:
+    image: redis:7
+    container_name: dc_redis
+    # `--appendonly yes` keeps the queue durable across restarts.
+    # Without it, an unclean shutdown would lose in-flight jobs and
+    # force us to drain via the dead-letter queue.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------
+# Named volumes for state we want to survive a routine `compose down`.
+# A `compose down -v` is the deliberate "wipe me" gesture.
+# ---------------------------------------------------------------------
+volumes:
+  sftp-data:
+  minio-data:
+  redis-data:

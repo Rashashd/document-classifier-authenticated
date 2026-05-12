@@ -1,0 +1,73 @@
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ----- uv / virtualenvs -----
+.venv/
+venv/
+env/
+.python-version
+
+# ----- Test & coverage artefacts -----
+.coverage
+.coverage.*
+htmlcov/
+.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.hypothesis/
+coverage.xml
+*.cover
+nosetests.xml
+.benchmarks/
+
+# ----- IDE / editor -----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ----- Project: secrets & local config -----
+# `.env.example` IS tracked; the real `.env` (Vault root token, ports) is not.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ----- Docker / runtime data volumes -----
+# Local volume mounts and runtime data must never enter the repo.
+minio-data/
+redis-data/
+sftp-data/
+postgres-data/
+vault-data/
+docker-data/
+
+# ----- Classifier artefacts NOT yet on git LFS -----
+# Tracked via git LFS once Person A wires it up; raw downloads must not leak.
+app/classifier/datasets/
+app/classifier/checkpoints/
+
+# ----- Logs -----
+*.log
+logs/
+
+# ----- Node / frontend (until that team sets their own) -----
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
