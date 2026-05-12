@@ -7,7 +7,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class Role(str, Enum):
+class UserRole(str, Enum):
     admin   = "admin"
     reviewer = "reviewer"
     auditor  = "auditor"
@@ -15,7 +15,7 @@ class Role(str, Enum):
 
 class UserBase(BaseModel):
     email: EmailStr
-    role:  Role = Role.reviewer
+    role:  UserRole = UserRole.reviewer
 
 
 class UserCreate(UserBase):
@@ -32,5 +32,5 @@ class UserRead(UserBase):
 
 class UserUpdate(BaseModel):
     """Partial update, all fields optional."""
-    role:      Role | None = None
+    role:      UserRole | None = None
     is_active: bool | None = None
