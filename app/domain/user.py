@@ -4,33 +4,24 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from fastapi_users import schemas
+from pydantic import Field
 
 
 class UserRole(str, Enum):
-    admin   = "admin"
+    admin    = "admin"
     reviewer = "reviewer"
     auditor  = "auditor"
 
 
-class UserBase(BaseModel):
-    email: EmailStr
-    role:  UserRole = UserRole.reviewer
-
-
-class UserCreate(UserBase):
-    password: str = Field(min_length=8)
-
-
-class UserRead(UserBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id:         uuid.UUID
-    is_active:  bool
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    role:       UserRole
     created_at: datetime
 
 
-class UserUpdate(BaseModel):
-    """Partial update, all fields optional."""
-    role:      UserRole | None = None
-    is_active: bool | None = None
+class UserCreate(schemas.BaseUserCreate):
+    role: UserRole = UserRole.reviewer
+
+
+class UserUpdate(schemas.BaseUserUpdate):
+    role: UserRole | None = None

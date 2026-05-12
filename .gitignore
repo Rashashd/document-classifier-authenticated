@@ -1,0 +1,4 @@
+plan/
+.env
+__pycache__/
+
