@@ -1,8 +1,3 @@
-"""
-app/domain/user.py
-DAY-1 CONTRACT — drafted by B, signed off by all four owners.
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -36,6 +31,6 @@ class UserRead(UserBase):
 
 
 class UserUpdate(BaseModel):
-    """Partial update — all fields optional."""
+    """Partial update, all fields optional."""
     role:      Role | None = None
     is_active: bool | None = None

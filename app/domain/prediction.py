@@ -1,8 +1,3 @@
-"""
-app/domain/prediction.py
-DAY-1 CONTRACT — drafted by B, signed off by all four owners.
-"""
-
 from __future__ import annotations
 
 import uuid
