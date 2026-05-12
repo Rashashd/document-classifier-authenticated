@@ -9,13 +9,13 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 class Role(str, Enum):
     admin   = "admin"
-    analyst = "analyst"
-    viewer  = "viewer"
+    reviewer = "reviewer"
+    auditor  = "auditor"
 
 
 class UserBase(BaseModel):
     email: EmailStr
-    role:  Role = Role.viewer
+    role:  Role = Role.reviewer
 
 
 class UserCreate(UserBase):
