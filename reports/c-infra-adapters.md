@@ -20,6 +20,15 @@
 - `app/infra/cache.py` — `init_redis_cache(redis_url)` async bootstrap
   for fastapi-cache2 against a `redis.asyncio` client (added in a
   follow-up commit on the same branch).
+- `app/infra/exceptions.py` — small typed-exception module
+  (`InfraError` base + `BlobUnavailableError`, `QueueUnavailableError`,
+  `CacheUnavailableError`, `SFTPConnectError`). Adapters raise these
+  instead of `RuntimeError` so the service layer can pattern-match on
+  type without importing SDK exceptions. Per CLAUDE.md §10.4.
+- `CLAUDE.md` — new §10 codifying error-handling conventions for the
+  whole project (narrow catches, `logger.exception`, exception chaining,
+  typed exceptions per layer, where retries live, refuse-to-start,
+  idempotency, PR-review checklist).
 - `CLAUDE.md` (this repo's AI-orientation doc) and `reports/` directory
   with the standing report template documented in CLAUDE.md §8.
 
@@ -107,6 +116,22 @@
   keyspace on logical DB 1. Both `app/infra/queue.py` (DB 0) and this
   module (DB 1) share the same Redis container; the DB suffix in the
   URL is the only thing keeping them apart.
+
+### Error handling: typed exceptions, narrow catches, `logger.exception`.
+
+- Each adapter catches a **narrow** SDK exception and re-raises as an
+  infra-typed exception from `app/infra/exceptions.py`:
+  - `paramiko.SSHException | OSError` → `SFTPConnectError`
+  - `redis.exceptions.ConnectionError` → `QueueUnavailableError` (queue),
+    `CacheUnavailableError` (cache)
+  - `urllib3.exceptions.MaxRetryError` → `BlobUnavailableError`
+- `S3Error` deliberately propagates from `blob.py` unchanged —
+  per-request server errors (403 / NoSuchBucket) are *not* the same
+  failure class as "MinIO is down" and shouldn't be flattened.
+- All `except` blocks use `logger.exception(...)` so the original
+  traceback lands in logs, plus `raise ... from exc` so the chain
+  survives for programmatic inspection (`exc.__cause__`).
+- See CLAUDE.md §10 for the full convention.
 
 ### Host ports bound to `127.0.0.1` only.
 

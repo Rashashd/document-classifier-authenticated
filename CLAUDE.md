@@ -221,7 +221,158 @@ uv sync
 
 ---
 
-## 10. When in doubt
+## 10. Error-handling conventions
+
+These rules apply to **every layer**, but they are most load-bearing in
+`app/infra/` (which talks to external systems) and in `app/services/`
+(which decides what to do with failures).
+
+### 10.1 Catch narrow, not broad
+
+`except Exception:` is almost never right. It hides bugs that should
+crash loudly (e.g. typos, attribute errors) by treating them like
+transient infrastructure failures.
+
+```python
+# Bad — swallows AttributeError, ImportError, KeyboardInterrupt-class
+# logic errors, and AuthenticationException, all the same way.
+try:
+    transport.connect(username=u, password=p)
+except Exception as exc:
+    raise RuntimeError(f"failed: {exc}") from exc
+
+# Good — narrow on the documented failure modes.
+try:
+    transport.connect(username=u, password=p)
+except (paramiko.SSHException, OSError) as exc:
+    raise SFTPConnectError(host=h, port=p) from exc
+```
+
+The only acceptable use of `except Exception` is at the very edge of
+the system (a polling-tick boundary, a single RQ job execution) where
+you must keep the long-lived loop alive. In those places, write
+`# noqa: BLE001` and a comment explaining the boundary.
+
+### 10.2 Log with `exc_info`, not without
+
+A bare `logger.error("X failed")` drops the traceback. The next person
+debugging at 2am has no idea where the error came from. Always log with
+the traceback when you catch:
+
+```python
+# Bad
+logger.error("minio: upload connection failed")
+raise RuntimeError(...) from exc
+
+# Good — logger.exception() implies exc_info=True at ERROR level
+logger.exception("minio: upload connection failed (bucket=%r key=%r)", b, k)
+raise BlobUnavailableError(...) from exc
+```
+
+Use `logger.exception(...)` inside `except` blocks. Reserve plain
+`logger.error(...)` for cases where you have no exception object on
+hand (rare).
+
+### 10.3 Preserve the chain — always use `raise ... from exc`
+
+Without `from exc`, Python loses the causal chain. Python 3 still
+prints both via `__context__`, but it labels the original as "During
+handling of the above exception, another exception occurred" — which
+implies a bug. With `from exc` we get "The above exception was the
+direct cause of the following exception", which is what we mean.
+
+### 10.4 Typed exceptions across layer boundaries
+
+Each layer translates external failures into its own vocabulary. This
+keeps higher layers from importing low-level SDK exceptions and keeps
+the architecture's directionality (§2) intact.
+
+| Layer | Catches | Raises |
+|---|---|---|
+| `app/infra/` | SDK exceptions (`S3Error`, `paramiko.SSHException`, `redis.exceptions.ConnectionError`, `urllib3.exceptions.MaxRetryError`, `OSError`) | Infra-typed exceptions, e.g. `BlobUnavailableError`, `BlobNotFoundError`, `QueueUnavailableError`, `SFTPConnectError`, `SFTPReadError` |
+| `app/services/` | Infra-typed exceptions + repository exceptions | Domain-typed exceptions, e.g. `BatchNotFoundError`, `RoleToggleForbiddenError`, `ClassifierUnavailableError` |
+| `app/api/` | Domain-typed exceptions | `fastapi.HTTPException` with appropriate status codes |
+| `app/repositories/` | SQLAlchemy exceptions | Repository exceptions; **never** HTTPException |
+
+Define infra-typed exceptions in `app/infra/exceptions.py` (one module,
+keep them tiny — usually just `class FooError(Exception): pass`). A
+single shared module avoids each adapter inventing its own hierarchy.
+
+Wrapping every failure as `RuntimeError` is an anti-pattern in this
+codebase: it forces every caller to either ignore the failure type or
+parse log strings, neither of which composes with a retry/backoff
+policy.
+
+### 10.5 Decide where retries live, then put them there
+
+Retries are policy, not transport — so they do not belong in
+`app/infra/`. The adapter surfaces failures faithfully; **someone
+above** decides whether to retry, dead-letter, or surface to the user.
+
+- **Network-level transient failures during inference** → RQ's job
+  retry config (`retry=Retry(max=3, interval=[5, 30, 120])`). The
+  worker entrypoint catches its own typed errors and re-raises to let
+  RQ handle the backoff.
+- **API-side transient failures** (e.g. cache backend hiccup) → return
+  the uncached path (degrade gracefully). The service layer decides
+  this, not the router.
+- **Permanent failures** (auth, schema mismatch, missing resource) →
+  never retry. Surface to the user with a stable error code.
+
+If you find yourself sleeping-and-retrying inside an infra adapter,
+move it out.
+
+### 10.6 Refuse-to-start over self-heal
+
+For startup probes (`MinioBlobClient.startup()`, `init_redis_cache()`,
+classifier weight verification), failure must propagate out and crash
+the container. A container in a crash-loop is observable; one that
+silently degraded is not.
+
+Specifically:
+- `api` and `worker` must refuse to boot if classifier weights are
+  missing, SHA-256 mismatches the model card, or model-card top-1 is
+  below the README threshold.
+- `api` must refuse to boot if Vault is unreachable or the Casbin
+  policy table is empty.
+- `api` and `worker` should refuse to boot if their backing Redis is
+  unreachable at startup (we cache-ping and queue-ping during the
+  startup event).
+
+### 10.7 Idempotency over exactly-once
+
+We chose at-most-once delivery in `SFTPClient.list_and_download_new_files`
+(delete-after-read). The cross-component contract is that the
+inference worker MUST be idempotent on `(batch_id, filename)`. If you
+add a new pipeline stage, ask yourself: "if this runs twice, what
+breaks?" and either make it idempotent or document why retries are
+forbidden.
+
+### 10.8 Don't catch what you can't handle
+
+If you can't make a decision based on the exception, don't catch it.
+Re-raising with a wrapped message just for the sake of "handling" is
+worse than letting the original propagate — it costs lines, hides the
+type, and adds nothing the caller can act on.
+
+### 10.9 Quick checklist when reviewing an `except`
+
+When you see a `try/except` in a PR review, ask:
+
+1. Is the caught type **narrow** (specific exception classes, not
+   `Exception`)?
+2. Does the log call use `logger.exception(...)` (or `exc_info=True`)?
+3. Is the re-raise chained with `from exc`?
+4. Does the new exception type live in the right layer (infra raises
+   infra-typed, services raise domain-typed, etc.)?
+5. Is there a comment explaining **why** this failure is caught here
+   and not propagated?
+
+If any answer is "no" without a documented reason, request changes.
+
+---
+
+## 11. When in doubt
 
 Re-read the architecture table in §2. Most bugs in this kind of layered
 codebase are layer violations dressed as functional bugs.

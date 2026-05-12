@@ -37,6 +37,9 @@ import logging
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis.asyncio import Redis as AsyncRedis
+from redis.exceptions import ConnectionError as RedisConnectionError
+
+from app.infra.exceptions import CacheUnavailableError
 
 
 logger = logging.getLogger(__name__)
@@ -109,8 +112,17 @@ async def init_redis_cache(redis_url: str) -> None:
     # propagates out of the FastAPI startup event, which is exactly
     # what we want — better a refusing-to-start API than one that 200s
     # on /healthz but errors on every cached route.
-    pong = await client.ping()
-    logger.info("cache: redis ping returned %r", pong)
+    try:
+        pong = await client.ping()
+        logger.info("cache: redis ping returned %r", pong)
+    except RedisConnectionError as exc:
+        # We deliberately do NOT log redis_url verbatim — it may carry
+        # credentials. The caller knows what URL it passed.
+        # logger.exception() + typed error per CLAUDE.md §10.2 / §10.4.
+        logger.exception("cache: redis ping failed during startup")
+        raise CacheUnavailableError(
+            f"Redis cache is unreachable at startup: {exc}"
+        ) from exc
 
     # Construct the backend wrapper and install it on the FastAPICache
     # singleton. ``prefix`` is shared by every decorator in the app, so

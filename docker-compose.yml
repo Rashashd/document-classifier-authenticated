@@ -40,7 +40,7 @@ services:
     # `scanner` / `password123` matches .env.example. Production swaps
     # this for a Vault-resolved keypair (no password auth) — see
     # SECURITY.md once that lands.
-    command: scanner:password123:::upload
+    command: scanner:password123::::upload
     ports:
       # Host 2222 → container 22. We pick 2222 to avoid clashing with
       # the developer's own sshd on port 22.

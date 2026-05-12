@@ -29,6 +29,8 @@ from typing import Iterator
 
 import paramiko
 
+from app.infra.exceptions import SFTPConnectError
+
 
 logger = logging.getLogger(__name__)
 
@@ -90,22 +92,45 @@ class SFTPClient:
 
         # ``Transport`` is the SSH-layer wrapper around the raw socket.
         # paramiko opens the TCP socket internally when given (host, port).
-        transport = paramiko.Transport((self._host, self._port))
         # We deliberately do NOT call ``transport.set_missing_host_key_policy``
         # via the higher-level SSHClient API because we don't need a shell —
         # SFTP is a subsystem-only protocol here, so Transport is leaner.
         # Server host keys are pinned at the infrastructure layer (the
         # atmoz/sftp image generates a stable key into its persistent
         # volume — see docker-compose.yml's ``sftp-data`` volume).
-        transport.connect(username=self._username, password=self._password)
+        #
+        # Narrow catch (CLAUDE.md §10.1): paramiko exceptions cover
+        # auth/protocol failure, OSError covers socket-level failure
+        # (DNS, connection refused, timeout). Anything else (typos,
+        # programmer error) must crash loudly — do NOT widen to
+        # ``except Exception``.
+        try:
+            transport = paramiko.Transport((self._host, self._port))
+            transport.connect(username=self._username, password=self._password)
+            sftp = paramiko.SFTPClient.from_transport(transport)
+        except (paramiko.SSHException, OSError) as exc:
+            # logger.exception() implies exc_info=True at ERROR level
+            # so the traceback lands in the log alongside the message.
+            logger.exception(
+                "sftp: connection failed to %s:%d as %r",
+                self._host, self._port, self._username,
+            )
+            # Translate to an infra-typed error (CLAUDE.md §10.4).
+            # Callers can introspect ``exc.__cause__`` if they need to
+            # distinguish auth (permanent) from network (retryable).
+            raise SFTPConnectError(
+                f"could not connect to {self._host}:{self._port} as "
+                f"{self._username!r}: {exc}"
+            ) from exc
 
-        sftp = paramiko.SFTPClient.from_transport(transport)
         if sftp is None:
-            # paramiko returns None if the subsystem could not be opened.
+            # paramiko returns None if the subsystem could not be opened
+            # (the SSH layer connected but the SFTP subsystem didn't).
             # Tear down the transport so we don't leak a dangling socket.
             transport.close()
-            raise RuntimeError(
-                f"SFTP subsystem failed to open against {self._host}:{self._port}"
+            raise SFTPConnectError(
+                f"SFTP subsystem failed to open against "
+                f"{self._host}:{self._port}"
             )
 
         self._transport = transport

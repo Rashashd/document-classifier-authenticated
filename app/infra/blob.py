@@ -29,6 +29,9 @@ from typing import BinaryIO
 
 from minio import Minio
 from minio.error import S3Error
+from urllib3.exceptions import MaxRetryError
+
+from app.infra.exceptions import BlobUnavailableError
 
 
 logger = logging.getLogger(__name__)
@@ -161,17 +164,34 @@ class MinioBlobClient:
         buffer: BinaryIO = io.BytesIO(file_stream)
         length            = len(file_stream)
 
-        # We let ``put_object`` raise S3Error on failure rather than
-        # catching it. The retry policy belongs in the service layer
-        # (or RQ's job retry config) — at the adapter level we surface
-        # errors faithfully so callers can decide.
-        self._client.put_object(
-            bucket_name=bucket,
-            object_name=file_name,
-            data=buffer,
-            length=length,
-            content_type=content_type,
-        )
+        # Two distinct failure modes, two distinct policies
+        # (CLAUDE.md §10.4):
+        #   • S3Error (server-side per-request, e.g. 403/404/NoSuchBucket)
+        #     propagates unchanged — the caller introspects ``.code``
+        #     and decides; we do NOT want to flatten "the bucket is
+        #     missing" into "MinIO is down".
+        #   • MaxRetryError (urllib3 connection-pool exhaustion ⇒ MinIO
+        #     itself is unreachable) → BlobUnavailableError, so the
+        #     service layer can distinguish "transient infra blip,
+        #     retry" from "permanent error, surface".
+        # Retry *policy* still lives above us (RQ retry config / service
+        # layer) — see CLAUDE.md §10.5.
+        try:
+            self._client.put_object(
+                bucket_name=bucket,
+                object_name=file_name,
+                data=buffer,
+                length=length,
+                content_type=content_type,
+            )
+        except MaxRetryError as exc:
+            logger.exception(
+                "minio: connection failed uploading %r to bucket %r",
+                file_name, bucket,
+            )
+            raise BlobUnavailableError(
+                f"MinIO upload to s3://{bucket}/{file_name} failed: {exc}"
+            ) from exc
 
         # Returning an `s3://` URI (rather than a presigned HTTP URL)
         # keeps this method side-effect-free w.r.t. expiry windows.

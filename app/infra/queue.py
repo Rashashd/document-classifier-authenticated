@@ -35,7 +35,10 @@ import logging
 from typing import Any
 
 from redis import Redis
+from redis.exceptions import ConnectionError as RedisConnectionError
 from rq import Queue
+
+from app.infra.exceptions import QueueUnavailableError
 
 
 logger = logging.getLogger(__name__)
@@ -122,6 +125,10 @@ class RQClient:
             raise *before* hitting Redis so callers get a clean
             programming-error signal rather than a delayed worker-side
             ImportError.
+        QueueUnavailableError
+            If the underlying Redis connection fails. The service layer
+            decides whether to retry or surface to the user
+            (CLAUDE.md §10.5).
         """
         # Pull the function path out of the envelope. We use ``.get``
         # rather than ``payload["func"]`` so we can emit a more useful
@@ -143,8 +150,21 @@ class RQClient:
         # RQ accepts a dotted string for ``f`` and will import-and-call
         # it inside the worker process. That's exactly the loose
         # coupling we want at the infra layer.
-        rq_job  = queue.enqueue(func_path, **kwargs)
-        job_id  = rq_job.get_id()
+        try:
+            rq_job = queue.enqueue(func_path, **kwargs)
+            job_id = rq_job.get_id()
+        except RedisConnectionError as exc:
+            # logger.exception() preserves the traceback in the log;
+            # the typed error preserves it in the exception chain for
+            # programmatic callers (CLAUDE.md §10.2, §10.3, §10.4).
+            logger.exception(
+                "rq: redis connection failed while enqueueing on "
+                "queue=%r func=%r",
+                queue_name, func_path,
+            )
+            raise QueueUnavailableError(
+                f"could not enqueue {func_path!r} on {queue_name!r}: {exc}"
+            ) from exc
 
         logger.info(
             "rq: enqueued job %s on queue=%r func=%r",
