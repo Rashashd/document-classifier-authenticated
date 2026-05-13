@@ -62,25 +62,6 @@ class CasbinRule(Base):
     v4: Mapped[str | None] = mapped_column(String(255), nullable=True)
     v5: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-class Batch(Base):
-    __tablename__ = "batches"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    sftp_path: Mapped[str] = mapped_column(String(512), nullable=False)
-    minio_input_path: Mapped[str] = mapped_column(String(512), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
-    )
-
-    # Relationship to predictions
-    predictions: Mapped[list["Prediction"]] = relationship(
-        "Prediction", back_populates="batch", cascade="all, delete-orphan"
-    )
-
 
 class Batch(Base):
     """A scanner-originated upload tracked through its classification."""
