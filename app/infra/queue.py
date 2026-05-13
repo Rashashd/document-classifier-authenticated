@@ -152,7 +152,10 @@ class RQClient:
         # coupling we want at the infra layer.
         try:
             rq_job = queue.enqueue(func_path, **kwargs)
-            job_id = rq_job.get_id()
+            # ``Job.id`` is the canonical accessor in RQ 2.x; the
+            # 1.x ``get_id()`` method was removed. Caught by the
+            # integration test suite (see reports/infra-adapters.md).
+            job_id = rq_job.id
         except RedisConnectionError as exc:
             # logger.exception() preserves the traceback in the log;
             # the typed error preserves it in the exception chain for
