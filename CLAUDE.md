@@ -372,7 +372,49 @@ If any answer is "no" without a documented reason, request changes.
 
 ---
 
-## 11. When in doubt
+## 11. Code Hygiene & Commenting Standards
+
+Comments in this repo are **high signal, low noise**. The codebase is
+small and the architecture doc lives outside the source files, so
+prose belongs in `ARCH.md`, `DECISIONS.md`, and `reports/*.md` — not
+buried in every adapter. Specifically:
+
+1. **Minimise inline comments.** Default to none. If removing a
+   comment wouldn't confuse a future reader, the comment shouldn't
+   exist.
+2. **One module-level docstring per file.** Short — one short
+   paragraph stating the file's purpose. No "Why a class, not a
+   function?" essays.
+3. **Short, concise docstrings on classes and public functions.**
+   Describe what the thing does and its non-obvious contract.
+   Skip parameter-by-parameter restatements that the type hints
+   already cover.
+4. **Inline comments only for genuinely non-obvious logic** —
+   SDK quirks, hidden constraints, cross-team invariants, subtle
+   ordering requirements. Examples that pass this bar:
+   - `atmoz/sftp chroots scanner to /home/scanner, so /upload is
+     what we see` (path-quirk surprise)
+   - `decode_responses=False — RedisBackend stores pickled bytes`
+     (would-look-tidy-to-flip flag)
+   - `delete before yielding — downstream must dedupe on filename`
+     (cross-team contract)
+5. **No tutorial / teaching comments.** Do not explain what `try /
+   except` does, what `BytesIO` is, or what Python idioms mean.
+   Assume the reader knows Python.
+6. **Don't restate the code.** `# increment counter` next to
+   `counter += 1` is noise. Either the name is unclear (fix the name)
+   or the comment is redundant (delete it).
+7. **Don't cite the current PR / task / issue inside the code.**
+   "added for the Y flow", "handles the case from issue #123" — that
+   belongs in the PR description and the report under `reports/`.
+
+The PR-review checklist in §10.9 applies here too: if a comment
+doesn't add information that the code can't, ask the author to delete
+it.
+
+---
+
+## 12. When in doubt
 
 Re-read the architecture table in §2. Most bugs in this kind of layered
 codebase are layer violations dressed as functional bugs.
