@@ -18,7 +18,7 @@ class BatchRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_batch(self, sftp_path: str, owner_id: uuid.UUID) -> Batch:
+    async def create_batch(self, sftp_path: str, owner_id: uuid.UUID | None) -> Batch:
         """Insert a PENDING batch row and return the ORM model.
 
         Uses ``flush`` (not ``commit``) so the row's auto-generated

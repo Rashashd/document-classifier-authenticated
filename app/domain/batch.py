@@ -29,7 +29,8 @@ class BatchRead(BatchBase):
 
     id: uuid.UUID
     status: BatchStatus
-    owner_id: uuid.UUID
+    # Nullable: scanner-originated batches have no JWT subject.
+    owner_id: uuid.UUID | None
     document_count: int
     created_at: datetime
     updated_at: datetime
