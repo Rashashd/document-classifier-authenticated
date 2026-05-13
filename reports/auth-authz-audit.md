@@ -123,4 +123,32 @@ python -m pytest tests/unit/ -v
 
 4. **`batch_service.py` uses a sync `Session`** — this will block the FastAPI event loop if called from an async route. It needs to be migrated to `AsyncSession` before the demo.
 
-5. **stdlib `logging` in infra adapters** — `blob.py`, `cache.py`, `sftp.py`, `queue.py` all use `import logging` instead of `structlog`. Logs from those files won't appear as structured JSON. Switch to `structlog.get_logger(__name__)`.
+5. **stdlib `logging` in infra adapters** — fixed. `blob.py`, `cache.py`, `sftp.py`, `queue.py` all switched to `structlog.get_logger(__name__)` during this session.
+
+---
+
+## Key decisions
+
+**fastapi-users over hand-rolled auth** — Gives password hashing, token revocation hooks, and user CRUD for free. The only custom code is `get_jwt_strategy`, which pulls the secret from Vault instead of env. Alternative (PyJWT manually) would have required duplicating what fastapi-users already does correctly.
+
+**JWT secret from Vault, not `.env`** — The secret is loaded at startup into `app.state.jwt_secret` and never written to disk or logs. If Vault is unreachable the app refuses to start (`sys.exit(1)`). Alternative (env var) would have meant the secret appears in `docker inspect` output and CI logs.
+
+**Casbin file-based enforcer, DB-backed check** — The enforcer reads `policy.csv` (fast, no DB round-trip per request). The lifespan also checks `casbin_rule` table is non-empty at boot — this guards against a deploy where the migration ran but the seed didn't. Alternative (DB adapter only) would have added a DB query on every `enforce()` call.
+
+**Casbin policy seeded via Alembic data migration** — `b1c2d3e4f5a6_seed_casbin_policy.py` runs `op.bulk_insert` so seeding is automatic, repeatable, and version-controlled. Alternative (compose entrypoint with inline SQL) was rejected because it would embed DB credentials in `docker-compose.yml`.
+
+**`auditor` does not inherit `reviewer`** — Auditors are read-only observers of the audit trail; they must not be able to relabel documents. Casbin has `g, admin, reviewer` and `g, admin, auditor` but no `g, auditor, reviewer`. Alternative (auditor inherits reviewer) would have violated the principle of least privilege.
+
+**Self-demotion blocked with 409** — An admin who demotes themselves leaves no admin in the system. The guard is in `set_user_role` before the DB write; the 409 is a client error (bad request semantics) not a 403. Alternative (allow and document) was ruled out because it produces an unrecoverable state without a manual DB fix.
+
+**`sys.exit(1)` in lifespan on any startup failure** — A container in a crash-loop is visible in `docker ps` and alerts. A container that started silently broken (Vault unreachable, empty policy) would serve 500s until someone noticed. Docker Compose `restart: unless-stopped` handles the loop.
+
+**Vault dev mode via entrypoint override** — `hashicorp/vault` image's `docker-entrypoint.sh` calls `setcap` which fails on Docker Desktop for Windows. Overriding the entrypoint to `vault server -dev ...` skips that script. `VAULT_DISABLE_MLOCK=true` stops the vault binary itself from trying mlock. This is dev-only; production Vault runs on a dedicated host.
+
+---
+
+## Open questions / follow-ups
+
+- `cache_service.invalidate_user(uid)` not yet called in `set_user_role` — waiting on Person B to ship `cache_service.py`. One line to add at `users.py:52`.
+- `batch_service.py` uses sync `Session` — needs migration to `AsyncSession` before demo (Person B's task).
+- Frontend is now Rasha's responsibility — not yet started.
