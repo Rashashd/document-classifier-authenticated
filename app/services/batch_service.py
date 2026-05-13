@@ -1,0 +1,29 @@
+"""Business logic for Batch entities. Owns transaction boundaries."""
+
+from __future__ import annotations
+
+import uuid
+
+from sqlalchemy.orm import Session
+
+from app.repositories.batch_repo import BatchRepository
+
+
+class BatchService:
+    """Orchestrates Batch creation and state transitions."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+        self._repo    = BatchRepository(session)
+
+    def create_pending_batch(self, filename: str, minio_path: str) -> uuid.UUID:
+        """Insert a PENDING batch and return its id.
+
+        Returns just the id rather than a full BatchRead because the
+        ingestion worker (the only current caller) only needs the id
+        to attach to its enqueued inference job. Read endpoints in
+        the API layer build BatchRead from the ORM row directly.
+        """
+        batch = self._repo.create_batch(filename=filename, minio_path=minio_path)
+        self._session.commit()
+        return batch.id
