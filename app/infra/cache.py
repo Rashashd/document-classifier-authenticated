@@ -7,7 +7,7 @@ it.
 
 from __future__ import annotations
 
-import logging
+import structlog
 
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -17,7 +17,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from app.infra.exceptions import CacheUnavailableError
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 CACHE_KEY_PREFIX: str = "dc-cache"
 
@@ -37,10 +37,9 @@ async def init_redis_cache(redis_url: str) -> None:
 
     try:
         pong = await client.ping()
-        logger.info("cache: redis ping returned %r", pong)
+        logger.info("cache.redis_ping", pong=pong)
     except RedisConnectionError as exc:
-        # redis_url may carry credentials — do not log it verbatim.
-        logger.exception("cache: redis ping failed during startup")
+        logger.exception("cache.redis_ping_failed")
         raise CacheUnavailableError(
             f"Redis cache is unreachable at startup: {exc}"
         ) from exc

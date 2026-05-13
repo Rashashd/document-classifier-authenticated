@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
 
     # 3. Casbin enforcer + non-empty policy guard
     try:
-        enforcer = casbin.AsyncEnforcer("casbin/model.conf", "casbin/policy.csv")
+        enforcer = casbin.AsyncEnforcer("app/casbin/model.conf", "app/casbin/policy.csv")
         await enforcer.load_policy()
     except Exception as exc:
         logger.critical("refuse_to_boot", reason="casbin_load_failed", error=str(exc))

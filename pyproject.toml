@@ -23,6 +23,7 @@ dependencies = [
     "casbin-async-sqlalchemy-adapter>=0.4.0",
     # Caching
     "fastapi-cache2[redis]>=0.2.1",
+
     # jinja2 is a transitive runtime dep we have to declare explicitly:
     # fastapi-cache2 imports from starlette.templating, and starlette
     # 1.0.0 made jinja2 a hard import-time requirement of that module

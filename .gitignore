@@ -36,21 +36,30 @@ venv.bak/
 .poetry/
 .uv/
 
-# ----- Test & coverage artefacts -----
+# ----- uv -----
+.uv/
+
+# ----- Distribution / packaging -----
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.installed.cfg
+
+# ----- Testing & coverage -----
+.pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
 .htmlcov/
 .cache
 .pytest_cache/
+coverage.xml
 .mypy_cache/
 .ruff_cache/
 .tox/
-.hypothesis/
-coverage.xml
-*.cover
-nosetests.xml
-.benchmarks/
+.cache
 
 # ----- Alembic -----
 app/db/migrations/__pycache__/
@@ -64,8 +73,7 @@ app/db/migrations/__pycache__/
 .DS_Store
 Thumbs.db
 
-# ----- Project: secrets & local config -----
-# `.env.example` IS tracked; the real `.env` (Vault root token, ports) is not.
+# ----- Secrets & local config -----
 .env
 .env.*
 !.env.example
@@ -79,7 +87,6 @@ Thumbs.db
 *.sqlite3
 
 # ----- Docker / runtime data volumes -----
-# Local volume mounts and runtime data must never enter the repo.
 minio-data/
 redis-data/
 sftp-data/
@@ -118,10 +125,11 @@ golden_images/
 # we keep them in source so historical runs are reviewable.
 !logs/
 
-# ----- Node / frontend (until that team sets their own) -----
+# ----- Node / frontend -----
 frontend/node_modules/
 frontend/dist/
 frontend/.next/
 
-# ----- Misc local working folders -----
+# ----- Local -----
 plan/
+CLAUDE.md

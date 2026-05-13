@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import io
-import logging
+import structlog
 from typing import BinaryIO
 
 from minio import Minio
@@ -13,7 +13,7 @@ from urllib3.exceptions import MaxRetryError
 from app.infra.exceptions import BlobUnavailableError
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class MinioBlobClient:

@@ -10,7 +10,7 @@ Payload contract for ``enqueue_job``::
 
 from __future__ import annotations
 
-import logging
+import structlog
 from typing import Any
 
 from redis import Redis
@@ -20,7 +20,7 @@ from rq import Queue
 from app.infra.exceptions import QueueUnavailableError
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class RQClient:

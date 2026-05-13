@@ -1,5 +1,86 @@
 services:
 
+  db:
+    image: postgres:16
+    container_name: dc_db
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: docclassifier
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d docclassifier"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  vault:
+    image: hashicorp/vault
+    container_name: dc_vault
+    entrypoint: ["vault", "server", "-dev",
+                 "-dev-root-token-id=root",
+                 "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      VAULT_DISABLE_MLOCK: "true"
+    ports:
+      - "127.0.0.1:8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status", "-address=http://127.0.0.1:8200"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  vault-init:
+    image: hashicorp/vault
+    container_name: dc_vault_init
+    entrypoint: >
+      sh -c "vault kv put -address=http://vault:8200 secret/jwt secret=dev-signing-key-change-in-prod"
+    environment:
+      VAULT_TOKEN: root
+    depends_on:
+      vault:
+        condition: service_healthy
+    restart: "no"
+
+  migrate:
+    build: .
+    container_name: dc_migrate
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://appuser:apppass@db:5432/docclassifier
+      VAULT_TOKEN: root
+      VAULT_ADDR: http://vault:8200
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    container_name: dc_api
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://appuser:apppass@db:5432/docclassifier
+      VAULT_TOKEN: root
+      VAULT_ADDR: http://vault:8200
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   sftp:
     image: atmoz/sftp:latest
     container_name: dc_sftp

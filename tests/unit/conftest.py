@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,6 +25,7 @@ def _make_user(role: str) -> User:
     user.is_superuser = False
     user.is_verified = True
     user.role = role
+    user.created_at = datetime.now(timezone.utc)
     return user
 
 
