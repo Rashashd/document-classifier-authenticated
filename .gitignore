@@ -71,9 +71,6 @@ logs/
 frontend/node_modules/
 frontend/dist/
 frontend/.next/
-plan/
-.env
-__pycache__/
 
-.venv/
-.pytest_cache/
+plan/
+CLAUDE.md
