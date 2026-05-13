@@ -50,19 +50,15 @@ jobs:
         # e2e ingestion test imports as a fixture helper.
         run: uv pip install --system pytest pytest-asyncio pillow
 
-      # CI has no .env; create a minimal one so compose variable
-      # interpolation works. Credentials here are throwaway — CI only.
+      # CI has no .env. Write only the fields that Settings declares
+      # (extra="forbid" rejects anything not in the model). Compose-only
+      # vars (POSTGRES_*, MINIO_*, SFTP_*) go on the compose step's env:
+      # so they never touch Pydantic Settings.
       - name: Create .env for CI
         run: |
           cat > .env << 'EOF'
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/app
           VAULT_TOKEN=ci-noop
-          POSTGRES_USER=postgres
-          POSTGRES_PASSWORD=postgres
-          POSTGRES_DB=app
-          MINIO_ROOT_USER=admin
-          MINIO_ROOT_PASSWORD=password123
-          SFTP_USER=scanner
-          SFTP_PASSWORD=password123
           EOF
 
       # Integration tests in tests/integration/ talk to real db /
@@ -71,6 +67,15 @@ jobs:
       # service is deliberately NOT started here — the Phase-2 worker
       # requires Vault, which CI does not provision yet.
       - name: Start infra services
+        env:
+          POSTGRES_USER:     postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB:       app
+          MINIO_ROOT_USER:   admin
+          MINIO_ROOT_PASSWORD: password123
+          SFTP_USER:         scanner
+          SFTP_PASSWORD:     password123
+          VAULT_TOKEN:       ci-noop
         run: docker compose up -d db redis minio sftp
 
       - name: Wait for services to be healthy
