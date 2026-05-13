@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+"""Repository for the batches table. SQL only — no business logic, no HTTP."""
+
 from __future__ import annotations
 
 import uuid
@@ -59,9 +60,3 @@ class BatchRepository:
         result = await self.session.execute(stmt)
         await self.session.flush()
         return result.scalar_one_or_none()
-=======
-"""Repository for the batches table. SQL only — no business logic, no HTTP."""
-
-from sqlalchemy.orm import Session
-
->>>>>>> origin/master
