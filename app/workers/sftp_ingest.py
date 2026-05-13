@@ -2,18 +2,15 @@
 
 Polls the SFTP upload directory every ``POLL_INTERVAL_SECONDS``, triages
 each file (empty / oversized / wrong extension / wrong magic bytes /
-valid TIFF), uploads valid TIFFs to MinIO, mocks a batch row, and
-enqueues a classification job onto Redis.
-
-DB persistence is currently MOCKED — ``batch_id`` is a generated UUID,
-no row is written. The integration with ``BatchService`` lands once
-Person B's DB environment is unblocked.
+valid TIFF), uploads valid TIFFs to MinIO, persists a PENDING batch row
+in Postgres, and enqueues a classification job onto Redis.
 
 Run with ``python -m app.workers.sftp_ingest``.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -25,7 +22,8 @@ import uuid
 
 import paramiko
 import structlog
-
+from sqlalchemy import NullPool
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from app.infra.blob       import MinioBlobClient
 from app.infra.exceptions import (
     BlobUnavailableError,
@@ -35,6 +33,7 @@ from app.infra.exceptions import (
 from app.infra.queue      import RQClient
 from app.infra.sftp       import SFTPClient
 from app.infra.vault      import VaultClient
+from app.services.batch_service import BatchService
 
 
 # -- configuration -----------------------------------------------------------
@@ -161,6 +160,22 @@ def _is_tiff_magic(head: bytes) -> bool:
     return any(head.startswith(m) for m in TIFF_MAGIC_BYTES)
 
 
+# -- database access ---------------------------------------------------------
+
+async def _create_pending_batch(engine: AsyncEngine, sftp_path: str) -> uuid.UUID:
+    """Open one transactional session, insert a PENDING batch, return its id.
+
+    Scanner-originated batches have no JWT subject; ``owner_id`` is None.
+    ``expire_on_commit=False`` keeps the returned ``id`` readable after
+    commit without triggering a lazy SELECT outside the greenlet.
+    """
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        return await BatchService(session).create_pending_batch(
+            sftp_path=sftp_path,
+            owner_id=None,
+        )
+
+
 # -- per-file processing -----------------------------------------------------
 
 def process_one(
@@ -168,6 +183,7 @@ def process_one(
     sftp:     SFTPClient,
     blob:     MinioBlobClient,
     queue:    RQClient,
+    engine:   AsyncEngine,
 ) -> None:
     """Triage one entry off the SFTP listing. Idempotent on safe filename."""
     # Defeat path traversal — only operate on the basename inside /upload.
@@ -215,10 +231,11 @@ def process_one(
     data      = sftp.read_file(upload_path)
     minio_uri = blob.upload_file(safe_name, data, content_type="image/tiff")
 
-    # MOCKED DB CALL — replace with BatchService.create_pending_batch()
-    # once Person B's DB env is online.
-    batch_id = str(uuid.uuid4())
-    log.info("ingest.db_mocked.batch_creation", batch_id=batch_id, minio_uri=minio_uri)
+    # Persist PENDING batch row. process_one is sync; the DB layer is
+    # async; one asyncio.run per file is cheap at this poll rate.
+    batch_uuid = asyncio.run(_create_pending_batch(engine, sftp_path=upload_path))
+    batch_id   = str(batch_uuid)
+    log.info("ingest.batch_persisted", batch_id=batch_id, minio_uri=minio_uri)
 
     ticket: dict[str, str] = {
         "batch_id":        batch_id,
@@ -263,9 +280,13 @@ def main() -> None:
     )
 
     sftp_creds, minio_creds = fetch_vault_secrets()
-    sftp  = build_sftp(sftp_creds)
-    blob  = build_blob(minio_creds)
-    queue = build_queue()
+    sftp   = build_sftp(sftp_creds)
+    blob   = build_blob(minio_creds)
+    queue  = build_queue()
+    # NullPool: the worker dispatches each file's DB write via
+    # asyncio.run, which spins a fresh event loop; asyncpg connections
+    # are not safe to reuse across event loops, so we avoid pooling.
+    engine = create_async_engine(os.environ["DATABASE_URL"], poolclass=NullPool)
 
     sftp.connect()
     blob.startup()
@@ -286,7 +307,7 @@ def main() -> None:
             request_id = str(uuid.uuid4())
             structlog.contextvars.bind_contextvars(request_id=request_id, filename=name)
             try:
-                process_one(name, sftp, blob, queue)
+                process_one(name, sftp, blob, queue, engine)
             except (BlobUnavailableError, QueueUnavailableError):
                 log.exception("ingest.downstream_unavailable")
             except Exception:  # noqa: BLE001

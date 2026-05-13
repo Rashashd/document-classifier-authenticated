@@ -57,7 +57,7 @@ def upgrade() -> None:
     op.create_table('batches',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('sftp_path', sa.String(), nullable=False),
-    sa.Column('owner_id', sa.UUID(), nullable=False),
+    sa.Column('owner_id', sa.UUID(), nullable=True),
     sa.Column('status', sa.String(length=32), server_default='pending', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

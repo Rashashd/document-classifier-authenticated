@@ -114,7 +114,9 @@ golden_images/
 
 # ----- Logs -----
 *.log
-logs/
+# logs/ holds JSON test-run records (per-script subdirs, per-run files);
+# we keep them in source so historical runs are reviewable.
+!logs/
 
 # ----- Node / frontend (until that team sets their own) -----
 frontend/node_modules/

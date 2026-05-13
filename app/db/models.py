@@ -76,8 +76,10 @@ class Batch(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     sftp_path: Mapped[str] = mapped_column(String, nullable=False)
-    owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    # Nullable: scanner-originated batches have no JWT subject. API-
+    # originated batches set this from the JWT subject.
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     status: Mapped[BatchStatus] = mapped_column(
         String(32),
@@ -95,7 +97,7 @@ class Batch(Base):
         nullable=False,
     )
 
-    owner: Mapped["User"] = relationship(back_populates="batches")
+    owner: Mapped["User | None"] = relationship(back_populates="batches")
     predictions: Mapped[list["Prediction"]] = relationship(
         back_populates="batch", lazy="selectin"
     )
