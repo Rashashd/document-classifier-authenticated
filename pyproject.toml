@@ -29,6 +29,13 @@ dependencies = [
 
     # Caching
     "fastapi-cache2[redis]>=0.2.1",
+    # jinja2 is a transitive runtime dep we have to declare explicitly:
+    # fastapi-cache2 imports from starlette.templating, and starlette
+    # 1.0.0 made jinja2 a hard import-time requirement of that module
+    # (it used to be lazy). Without this, `from fastapi_cache import
+    # FastAPICache` raises ImportError. Tracking upstream — when
+    # fastapi-cache2 stops touching starlette.templating, drop this.
+    "jinja2>=3.1.0",
 
     # Queue (redis version is constrained by fastapi-cache2 to <5)
     "rq>=1.16.0",
