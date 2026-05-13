@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Batch
 from app.domain.batch import BatchStatus
@@ -11,10 +11,10 @@ from app.domain.batch import BatchStatus
 class BatchRepository:
     """SQL access for batches. Caller owns the session and the transaction."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    def create_batch(self, filename: str, minio_path: str) -> Batch:
+    async def create_batch(self, filename: str, minio_path: str) -> Batch:
         """Insert a PENDING batch row and return the ORM model.
 
         Uses ``flush`` (not ``commit``) so the row's auto-generated
@@ -27,5 +27,5 @@ class BatchRepository:
             status=BatchStatus.pending,
         )
         self._session.add(batch)
-        self._session.flush()
+        await self._session.flush()
         return batch
