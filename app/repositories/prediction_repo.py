@@ -1,43 +1,53 @@
-from uuid import UUID
-from sqlalchemy import select
+# app/repositories/prediction_repo.py
+from __future__ import annotations
+
+import uuid
+from typing import Sequence
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models import Prediction
 from app.domain.prediction import PredictionCreate, PredictionUpdate
+
 
 class PredictionRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, data: PredictionCreate) -> Prediction:
-        new_prediction = Prediction(**data.model_dump())
-        self.session.add(new_prediction)
-        await self.session.commit()
-        await self.session.refresh(new_prediction)
-        return new_prediction
-
-    async def get_by_id(self, prediction_id: UUID) -> Prediction | None:
-        result = await self.session.execute(
-            select(Prediction).where(Prediction.id == prediction_id)
+    async def create(self, prediction_data: PredictionCreate) -> Prediction:
+        """Store a new prediction result."""
+        prediction = Prediction(
+            batch_id=prediction_data.batch_id,
+            filename=prediction_data.filename,
+            label=prediction_data.label,
+            confidence=prediction_data.confidence,
+            overlay_path=prediction_data.overlay_path,
         )
-        return result.scalars().first()
-
-    async def get_by_batch(self, batch_id: UUID) -> list[Prediction]:
-        """Useful for the API to show all results for one batch."""
-        result = await self.session.execute(
-            select(Prediction).where(Prediction.batch_id == batch_id)
-        )
-        return list(result.scalars().all())
-
-    async def update(self, prediction_id: UUID, data: PredictionUpdate) -> Prediction | None:
-        """Used for 'Relabeling' by an analyst."""
-        prediction = await self.get_by_id(prediction_id)
-        if not prediction:
-            return None
-        
-        update_data = data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(prediction, key, value)
-            
-        await self.session.commit()
-        await self.session.refresh(prediction)
+        self.session.add(prediction)
+        await self.session.flush()
         return prediction
+
+    async def get(self, prediction_id: uuid.UUID) -> Prediction | None:
+        stmt = select(Prediction).where(Prediction.id == prediction_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_batch(self, batch_id: uuid.UUID) -> Sequence[Prediction]:
+        stmt = select(Prediction).where(Prediction.batch_id == batch_id).order_by(Prediction.created_at)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def list_recent(self, limit: int = 100) -> Sequence[Prediction]:
+        stmt = select(Prediction).order_by(Prediction.created_at.desc()).limit(limit)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def update(self, prediction_id: uuid.UUID, updates: PredictionUpdate) -> Prediction | None:
+        data = updates.model_dump(exclude_unset=True)
+        if not data:
+            return await self.get(prediction_id)
+        stmt = update(Prediction).where(Prediction.id == prediction_id).values(**data).returning(Prediction)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.scalar_one_or_none()

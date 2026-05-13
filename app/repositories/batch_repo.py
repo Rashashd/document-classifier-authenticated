@@ -1,51 +1,61 @@
-from uuid import UUID
-from sqlalchemy import select
+# app/repositories/batch_repo.py
+from __future__ import annotations
+
+import uuid
+from typing import Sequence
+
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models import Batch
-from app.domain.batch import BatchCreate, BatchUpdate
+from app.domain.batch import BatchStatus, BatchCreate, BatchUpdate
+
 
 class BatchRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, data: BatchCreate, owner_id: UUID) -> Batch:
-        """Converts Pydantic 'BatchCreate' to SQLAlchemy 'Batch' model and saves."""
-        new_batch = Batch(
-            **data.model_dump(),
-            owner_id=owner_id
+    async def create(self, batch_data: BatchCreate, owner_id: uuid.UUID) -> Batch:
+        """Create a new batch row. Returns the ORM object."""
+        batch = Batch(
+            sftp_path=batch_data.sftp_path,
+            owner_id=owner_id,
+            status=BatchStatus.pending,
         )
-        self.session.add(new_batch)
-        await self.session.commit()
-        await self.session.refresh(new_batch)
-        return new_batch
-
-    async def get_by_id(self, batch_id: UUID) -> Batch | None:
-        """Fetches a single batch. Returns None if not found."""
-        result = await self.session.execute(
-            select(Batch).where(Batch.id == batch_id)
-        )
-        return result.scalars().first()
-
-    async def list_all(self, owner_id: UUID | None = None) -> list[Batch]:
-        """Lists batches, optionally filtered by owner."""
-        query = select(Batch)
-        if owner_id:
-            query = query.where(Batch.owner_id == owner_id)
-        
-        result = await self.session.execute(query.order_by(Batch.created_at.desc()))
-        return list(result.scalars().all())
-
-    async def update(self, batch_id: UUID, data: BatchUpdate) -> Batch | None:
-        """Updates batch status or document count."""
-        batch = await self.get_by_id(batch_id)
-        if not batch:
-            return None
-        
-        # Only update fields that were actually provided in the request
-        update_data = data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(batch, key, value)
-        
-        await self.session.commit()
-        await self.session.refresh(batch)
+        self.session.add(batch)
+        await self.session.flush()   # assigns id, but doesn't commit
         return batch
+
+    async def get(self, batch_id: uuid.UUID) -> Batch | None:
+        stmt = select(Batch).where(Batch.id == batch_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_with_predictions(self, batch_id: uuid.UUID) -> Batch | None:
+        """Eagerly load predictions for the batch (used in service to avoid N+1)."""
+        from sqlalchemy.orm import selectinload
+        stmt = select(Batch).where(Batch.id == batch_id).options(selectinload(Batch.predictions))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def list_by_owner(self, owner_id: uuid.UUID, skip: int = 0, limit: int = 100) -> Sequence[Batch]:
+        stmt = select(Batch).where(Batch.owner_id == owner_id).offset(skip).limit(limit).order_by(Batch.created_at.desc())
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
+    async def update_status(self, batch_id: uuid.UUID, status: BatchStatus) -> Batch | None:
+        """Update only the status. Returns the updated object or None if not found."""
+        stmt = update(Batch).where(Batch.id == batch_id).values(status=status).returning(Batch)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.scalar_one_or_none()
+
+    async def update(self, batch_id: uuid.UUID, updates: BatchUpdate) -> Batch | None:
+        """Generic update using the domain Pydantic model."""
+        data = updates.model_dump(exclude_unset=True)
+        if not data:
+            return await self.get(batch_id)
+        stmt = update(Batch).where(Batch.id == batch_id).values(**data).returning(Batch)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.scalar_one_or_none()
