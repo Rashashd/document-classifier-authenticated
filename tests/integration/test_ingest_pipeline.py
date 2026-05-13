@@ -46,11 +46,11 @@ DATABASE_URL: str = os.environ.get(
 )
 SFTP_HOST:      str = "localhost"
 SFTP_PORT:      int = 2222
-SFTP_USER:      str = "scanner"
-SFTP_PASS:      str = "password123"
+SFTP_USER:      str = os.environ.get("SFTP_USER",       "scanner")
+SFTP_PASS:      str = os.environ.get("SFTP_PASSWORD",   "change-me-in-production")
 MINIO_ENDPOINT: str = "localhost:9000"
-MINIO_USER:     str = "admin"
-MINIO_PASS:     str = "password123"
+MINIO_USER:     str = os.environ.get("MINIO_ROOT_USER",     "admin")
+MINIO_PASS:     str = os.environ.get("MINIO_ROOT_PASSWORD", "change-me-in-production")
 REDIS_URL:      str = "redis://localhost:6379/0"
 
 UPLOAD_DIR:     str = "/upload"

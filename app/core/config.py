@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="forbid",
+        # Ignore compose-only vars (POSTGRES_*, MINIO_*, SFTP_*) that
+        # live alongside Settings fields in the shared .env file.
+        extra="ignore",
     )
 
     # Database

@@ -1,133 +1,99 @@
 """RQ inference worker entrypoint.
 
-The worker consumes ``app.domain.jobs.InferenceJob`` payloads, reads the input
-document from blob storage, runs the classifier, writes an annotated overlay
-PNG, and records a prediction event. The persistence adapter is intentionally
-thin because the service/repository layer is owned by another teammate.
+Consumes ``app.domain.jobs.InferenceJob`` payloads from Redis, downloads
+the document from MinIO, classifies it, writes an annotated overlay PNG
+back to MinIO, persists the prediction in Postgres, marks the parent
+batch ``done``, and invalidates API caches.
+
+All infrastructure access goes through ``app.infra.*`` adapters; secrets
+come from Vault.
 """
 
 from __future__ import annotations
 
-import json
+import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+import sys
 from io import BytesIO
 from pathlib import Path
-from typing import Protocol
+from typing import Callable
 
+import structlog
 from PIL import Image, ImageDraw, ImageFont
+from redis import Redis
+from redis.asyncio import Redis as AsyncRedis
+from rq import Worker
+from sqlalchemy import NullPool
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
 from app.classifier.inference import Prediction, get_default_classifier
 from app.domain.jobs import InferenceJob
+from app.domain.prediction import DocumentLabel, PredictionCreate
+from app.infra.blob import MinioBlobClient
+from app.infra.vault import VaultClient
+from app.services.prediction_service import PredictionService
 
 
-LOGGER = logging.getLogger(__name__)
+# The integration-test seam: callers can substitute a fake classifier
+# (returning a known label / confidence / overlay) to exercise the full
+# pipeline without torch + the ConvNeXt weights installed.
+ClassifyFn = Callable[[bytes], tuple[str, float, bytes]]
 
 
-class BlobStore(Protocol):
-    def read_bytes(self, key: str) -> bytes:
-        """Read an object from blob storage."""
+log = structlog.get_logger("inference_worker")
 
-    def write_bytes(self, key: str, content: bytes, content_type: str) -> None:
-        """Write an object to blob storage."""
+QUEUE_NAME = os.environ.get("INFERENCE_QUEUE", "classification_queue")
 
 
-class LocalBlobStore:
-    """Filesystem-backed blob store for local development and tests."""
-
-    def __init__(self, root: Path | None = None) -> None:
-        self.root = root or Path(os.getenv("BLOB_ROOT", "/tmp/week6-blobs"))
-        self.root.mkdir(parents=True, exist_ok=True)
-
-    def _resolve_key(self, key: str) -> Path:
-        path = (self.root / key).resolve()
-        root = self.root.resolve()
-        if root not in path.parents and path != root:
-            raise ValueError(f"Blob key escapes local blob root: {key}")
-        return path
-
-    def read_bytes(self, key: str) -> bytes:
-        return self._resolve_key(key).read_bytes()
-
-    def write_bytes(self, key: str, content: bytes, content_type: str) -> None:
-        _ = content_type
-        path = self._resolve_key(key)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(content)
+# -- secrets bootstrap -------------------------------------------------------
 
 
-class MinioBlobStore:
-    """MinIO-backed blob store.
+def fetch_vault_secrets() -> dict:
+    """Fetch MinIO credentials from Vault. Exit on failure."""
+    addr = os.environ.get("VAULT_ADDR", "http://vault:8200")
+    token = os.environ.get("VAULT_TOKEN")
+    if not token:
+        log.critical("vault.boot.missing_token")
+        sys.exit(1)
 
-    The import is lazy so unit tests can exercise the worker without installing
-    the MinIO client.
-    """
-
-    def __init__(self) -> None:
-        from minio import Minio
-
-        endpoint = os.environ["MINIO_ENDPOINT"]
-        access_key = os.environ["MINIO_ACCESS_KEY"]
-        secret_key = os.environ["MINIO_SECRET_KEY"]
-        secure = os.getenv("MINIO_SECURE", "false").lower() == "true"
-        self.bucket = os.getenv("MINIO_BUCKET", "documents")
-        self.client = Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
-
-    def read_bytes(self, key: str) -> bytes:
-        response = self.client.get_object(self.bucket, key)
-        try:
-            return response.read()
-        finally:
-            response.close()
-            response.release_conn()
-
-    def write_bytes(self, key: str, content: bytes, content_type: str) -> None:
-        self.client.put_object(
-            self.bucket,
-            key,
-            BytesIO(content),
-            length=len(content),
-            content_type=content_type,
+    minio_path = os.environ.get("VAULT_MINIO_PATH", "minio")
+    try:
+        vault = VaultClient(addr=addr, token=token)
+        return vault.get_secret(minio_path)
+    except Exception as exc:  # noqa: BLE001 — boot boundary
+        log.critical(
+            "vault.boot.fetch_failed", addr=addr, minio_path=minio_path, error=str(exc)
         )
+        sys.exit(1)
 
 
-class PredictionSink(Protocol):
-    def record(self, record: dict) -> None:
-        """Persist a prediction record."""
+# -- factories ---------------------------------------------------------------
 
 
-class JsonlPredictionSink:
-    """Development fallback until the prediction service/repository is wired."""
-
-    def __init__(self, path: Path | None = None) -> None:
-        self.path = path or Path(os.getenv("PREDICTION_OUTBOX_PATH", "/tmp/week6-predictions.jsonl"))
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-
-    def record(self, record: dict) -> None:
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, default=str) + "\n")
+def build_blob(minio_creds: dict) -> MinioBlobClient:
+    return MinioBlobClient(
+        endpoint=os.environ.get("MINIO_ENDPOINT", "minio:9000"),
+        access_key=minio_creds["access_key"],
+        secret_key=minio_creds["secret_key"],
+        secure=False,
+    )
 
 
-def default_blob_store() -> BlobStore:
-    if os.getenv("MINIO_ENDPOINT"):
-        return MinioBlobStore()
-    return LocalBlobStore()
+def build_redis_url() -> str:
+    return os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
 
-def default_prediction_sink() -> PredictionSink:
-    return JsonlPredictionSink()
+# -- overlay rendering (stays in the worker; classifier file remains ML-only) -
 
 
 def overlay_key_for(job: InferenceJob) -> str:
     source = Path(job.filename)
-    name = f"{source.stem}.overlay.png"
-    return f"batches/{job.batch_id}/overlays/{name}"
+    return f"batches/{job.batch_id}/overlays/{source.stem}.overlay.png"
 
 
 def create_overlay_png(image_bytes: bytes, prediction: Prediction) -> bytes:
-    """Create a simple annotated preview PNG for the classified document."""
-
+    """Render a small annotated preview PNG with the predicted label."""
     with Image.open(BytesIO(image_bytes)) as image:
         preview = image.convert("RGB")
         preview.thumbnail((1200, 1200))
@@ -137,11 +103,9 @@ def create_overlay_png(image_bytes: bytes, prediction: Prediction) -> bytes:
     padding = 12
     font = ImageFont.load_default()
     bbox = draw.textbbox((0, 0), text, font=font)
-    width = bbox[2] - bbox[0]
-    height = bbox[3] - bbox[1]
+    width, height = bbox[2] - bbox[0], bbox[3] - bbox[1]
     draw.rectangle(
-        [0, 0, width + padding * 2, height + padding * 2],
-        fill=(0, 0, 0),
+        [0, 0, width + padding * 2, height + padding * 2], fill=(0, 0, 0)
     )
     draw.text((padding, padding), text, fill=(255, 255, 255), font=font)
 
@@ -150,91 +114,148 @@ def create_overlay_png(image_bytes: bytes, prediction: Prediction) -> bytes:
     return out.getvalue()
 
 
-def build_prediction_record(
-    *,
-    job: InferenceJob,
-    prediction: Prediction,
-    overlay_path: str,
-) -> dict:
-    return {
-        "job_id": str(job.job_id),
-        "batch_id": str(job.batch_id),
-        "filename": job.filename,
-        "blob_path": job.blob_path,
-        "label": prediction.label,
-        "label_id": prediction.label_id,
-        "confidence": prediction.confidence,
-        "top_k": prediction.top_k,
-        "overlay_path": overlay_path,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
+# -- classification + overlay (the single ML seam) --------------------------
+
+
+def run_classification(image_bytes: bytes) -> tuple[str, float, bytes]:
+    """Classify + render overlay in one step. Returns (label, confidence, overlay_png).
+
+    This is the production implementation. Integration tests inject a
+    pure-Python stub via ``run_inference(..., classify=...)`` to keep
+    the test loop fast and torch-free.
+    """
+    prediction: Prediction = get_default_classifier().predict_bytes(image_bytes)
+    overlay_png = create_overlay_png(image_bytes, prediction)
+    return prediction.label, prediction.confidence, overlay_png
+
+
+# -- DB integration ---------------------------------------------------------
+
+
+async def _persist(
+    engine: AsyncEngine,
+    cache_redis: AsyncRedis | None,
+    prediction_in: PredictionCreate,
+) -> None:
+    """Open one session, save the prediction, flip the batch to done."""
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        await PredictionService(
+            session, cache_redis=cache_redis
+        ).save_prediction_and_complete_batch(prediction_in)
+
+
+# -- the RQ target function -------------------------------------------------
 
 
 def run_inference(
     payload: str,
     *,
-    blob_store: BlobStore | None = None,
-    prediction_sink: PredictionSink | None = None,
+    blob: MinioBlobClient | None = None,
+    engine: AsyncEngine | None = None,
+    cache_redis: AsyncRedis | None = None,
+    classify: ClassifyFn | None = None,
 ) -> dict:
-    """RQ target function.
+    """RQ-callable inference entrypoint.
 
-    ``payload`` must be ``InferenceJob.model_dump_json()``. The return value is
-    JSON-serialisable so RQ dashboards and tests can inspect it.
+    ``payload`` is ``InferenceJob.model_dump_json()``. The keyword
+    arguments are dependency-injection seams used by the integration
+    test; in production the worker boots all three from env+Vault and
+    ``classify`` defaults to the real ConvNeXt classifier.
+
+    Returns a JSON-friendly summary so RQ dashboards can inspect runs.
     """
-
     job = InferenceJob.from_rq_kwargs(payload)
-    store = blob_store or default_blob_store()
-    sink = prediction_sink or default_prediction_sink()
+    structlog.contextvars.bind_contextvars(
+        job_id=str(job.job_id), batch_id=str(job.batch_id)
+    )
 
-    LOGGER.info("inference_job_started", extra={"job_id": str(job.job_id), "batch_id": str(job.batch_id)})
+    try:
+        blob_client = blob or build_blob(fetch_vault_secrets())
+        db_engine = engine or create_async_engine(
+            os.environ["DATABASE_URL"], poolclass=NullPool
+        )
+        classify_fn: ClassifyFn = classify or run_classification
 
-    image_bytes = store.read_bytes(job.blob_path)
-    classifier = get_default_classifier()
-    prediction = classifier.predict_bytes(image_bytes)
+        log.info("inference.start", filename=job.filename)
+        image_bytes = blob_client.download_file(job.blob_path)
+        label, confidence, overlay_png = classify_fn(image_bytes)
 
-    overlay_path = overlay_key_for(job)
-    overlay_png = create_overlay_png(image_bytes, prediction)
-    store.write_bytes(overlay_path, overlay_png, content_type="image/png")
+        overlay_key = overlay_key_for(job)
+        overlay_uri = blob_client.upload_file(
+            overlay_key, overlay_png, content_type="image/png"
+        )
 
-    record = build_prediction_record(job=job, prediction=prediction, overlay_path=overlay_path)
-    sink.record(record)
+        # DocumentLabel enforces the 16-class RVL-CDIP taxonomy.
+        # Person A's model card MUST list class names matching the
+        # enum; a mismatch surfaces as ValueError right here.
+        prediction_in = PredictionCreate(
+            batch_id=job.batch_id,
+            filename=job.filename,
+            label=DocumentLabel(label),
+            confidence=confidence,
+            overlay_path=overlay_uri,
+        )
+        asyncio.run(_persist(db_engine, cache_redis, prediction_in))
 
-    LOGGER.info(
-        "inference_job_finished",
-        extra={
+        log.info(
+            "inference.success",
+            label=label,
+            confidence=confidence,
+            overlay_uri=overlay_uri,
+        )
+        return {
             "job_id": str(job.job_id),
             "batch_id": str(job.batch_id),
-            "label": prediction.label,
-            "confidence": prediction.confidence,
-        },
+            "label": label,
+            "confidence": confidence,
+            "overlay_path": overlay_uri,
+        }
+    finally:
+        structlog.contextvars.clear_contextvars()
+
+
+__all__ = ["run_inference", "run_classification", "create_overlay_png", "main"]
+
+
+# -- main loop --------------------------------------------------------------
+
+
+def configure_logging() -> None:
+    """Route stdlib + structlog through a JSON renderer (matches sftp_ingest)."""
+    shared = [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+    ]
+    structlog.configure(
+        processors=shared + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
     )
-    return record
-
-
-__all__ = [
-    "BlobStore",
-    "LocalBlobStore",
-    "MinioBlobStore",
-    "PredictionSink",
-    "JsonlPredictionSink",
-    "run_inference",
-    "main",
-]
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=shared,
+        processor=structlog.processors.JSONRenderer(),
+    )
+    handler = logging.StreamHandler(stream=sys.stdout)
+    handler.setFormatter(formatter)
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.INFO)
 
 
 def main() -> None:
-    """Run an RQ worker for inference jobs."""
+    """Start an RQ worker that consumes inference jobs."""
+    configure_logging()
+    log.info("inference_worker.boot", queue=QUEUE_NAME)
 
-    from redis import Redis
-    from rq import Worker
+    # Bootstrap Vault and prove we can reach all backing services before
+    # joining the queue — refuse-to-start semantics.
+    fetch_vault_secrets()  # exit-on-failure side effect
 
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    queue_name = os.getenv("INFERENCE_QUEUE", "inference")
-    connection = Redis.from_url(redis_url)
-
-    logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
-    LOGGER.info("inference_worker_started", extra={"queue": queue_name, "redis_url": redis_url})
-    Worker([queue_name], connection=connection).work()
+    connection = Redis.from_url(build_redis_url())
+    Worker([QUEUE_NAME], connection=connection).work()
 
 
 if __name__ == "__main__":
