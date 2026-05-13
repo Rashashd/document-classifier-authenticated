@@ -1,14 +1,9 @@
-<<<<<<< HEAD
-# Byte-compiled / cache
-=======
 # ----- Python -----
->>>>>>> origin/master
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-<<<<<<< HEAD
 
 # Virtual environments
 env/
@@ -78,7 +73,6 @@ logs/
 # IDE / Editor
 .vscode/
 .idea/
-=======
 *.egg-info/
 .eggs/
 build/
@@ -111,16 +105,10 @@ nosetests.xml
 # ----- IDE / editor -----
 .idea/
 .vscode/
->>>>>>> origin/master
 *.swp
 *.swo
 *~
 .DS_Store
-
-<<<<<<< HEAD
-# Docker
-*.pid
-docker-compose.override.yml   # optional local overrides
 
 # Model artifacts – these go through Git LFS, but ignore raw checkouts without LFS
 *.pt
@@ -144,9 +132,8 @@ golden_images/
 
 # OS metadata
 Thumbs.db
-=======
+
 # ----- Project: secrets & local config -----
-# `.env.example` IS tracked; the real `.env` (Vault root token, ports) is not.
 .env
 .env.*
 !.env.example
@@ -178,4 +165,3 @@ frontend/.next/
 
 plan/
 CLAUDE.md
->>>>>>> origin/master
