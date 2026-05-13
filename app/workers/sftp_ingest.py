@@ -34,6 +34,7 @@ from app.infra.exceptions import (
 )
 from app.infra.queue      import RQClient
 from app.infra.sftp       import SFTPClient
+from app.infra.vault      import VaultClient
 
 
 # -- configuration -----------------------------------------------------------
@@ -89,22 +90,59 @@ def configure_logging() -> None:
 log = structlog.get_logger("sftp_ingest")
 
 
+# -- secrets ----------------------------------------------------------------
+
+def fetch_vault_secrets() -> tuple[dict, dict]:
+    """Read SFTP and MinIO credential dicts from Vault. Exits the process on failure.
+
+    The worker is a standalone Python process — it does NOT share the
+    API's FastAPI lifespan, so it owns its own Vault bootstrap. On any
+    failure (missing token, network, missing key) we log a critical
+    event and exit so the orchestrator can surface the boot failure
+    rather than a degraded worker silently dropping files.
+    """
+    addr  = os.environ.get("VAULT_ADDR", "http://vault:8200")
+    token = os.environ.get("VAULT_TOKEN")
+    if not token:
+        log.critical("vault.boot.missing_token")
+        sys.exit(1)
+
+    sftp_path  = os.environ.get("VAULT_SFTP_PATH",  "sftp")
+    minio_path = os.environ.get("VAULT_MINIO_PATH", "minio")
+
+    try:
+        vault       = VaultClient(addr=addr, token=token)
+        sftp_creds  = vault.get_secret(sftp_path)
+        minio_creds = vault.get_secret(minio_path)
+    except Exception as exc:
+        log.critical(
+            "vault.boot.fetch_failed",
+            addr=addr,
+            sftp_path=sftp_path,
+            minio_path=minio_path,
+            error=str(exc),
+        )
+        sys.exit(1)
+
+    return sftp_creds, minio_creds
+
+
 # -- factories ---------------------------------------------------------------
 
-def build_sftp() -> SFTPClient:
+def build_sftp(creds: dict) -> SFTPClient:
     return SFTPClient(
-        host=os.environ.get("SFTP_HOST",     "sftp"),
-        port=int(os.environ.get("SFTP_PORT",  "22")),
-        username=os.environ.get("SFTP_USERNAME", "scanner"),
-        password=os.environ.get("SFTP_PASSWORD", "password123"),
+        host=os.environ.get("SFTP_HOST",    "sftp"),
+        port=int(os.environ.get("SFTP_PORT", "22")),
+        username=creds["username"],
+        password=creds["password"],
     )
 
 
-def build_blob() -> MinioBlobClient:
+def build_blob(creds: dict) -> MinioBlobClient:
     return MinioBlobClient(
-        endpoint=os.environ.get("MINIO_ENDPOINT",  "minio:9000"),
-        access_key=os.environ.get("MINIO_ACCESS_KEY", "admin"),
-        secret_key=os.environ.get("MINIO_SECRET_KEY", "password123"),
+        endpoint=os.environ.get("MINIO_ENDPOINT", "minio:9000"),
+        access_key=creds["access_key"],
+        secret_key=creds["secret_key"],
         secure=False,
     )
 
@@ -224,8 +262,9 @@ def main() -> None:
         max_size_bytes=MAX_FILE_SIZE_BYTES,
     )
 
-    sftp  = build_sftp()
-    blob  = build_blob()
+    sftp_creds, minio_creds = fetch_vault_secrets()
+    sftp  = build_sftp(sftp_creds)
+    blob  = build_blob(minio_creds)
     queue = build_queue()
 
     sftp.connect()
