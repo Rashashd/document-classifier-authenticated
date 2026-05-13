@@ -1,0 +1,9 @@
+# Policies: p, <role>, <required_role>
+p, admin, admin
+p, reviewer, reviewer
+p, auditor, auditor
+
+# Role inheritance: g, <child>, <parent>
+# admin can do everything an admin, reviewer, or auditor can
+g, admin, reviewer
+g, admin, auditor
