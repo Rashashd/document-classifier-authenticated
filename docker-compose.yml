@@ -1,0 +1,73 @@
+services:
+
+  sftp:
+    image: atmoz/sftp:latest
+    container_name: dc_sftp
+    # scanner:<pass>:<uid>::<dirs>  — uid 1001, default gid, two dirs.
+    command: scanner:password123:1001::upload,quarantine
+    ports:
+      - "127.0.0.1:2222:22"
+    volumes:
+      - sftp-data:/home/scanner
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: dc_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER:     admin
+      MINIO_ROOT_PASSWORD: password123
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: dc_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+    restart: unless-stopped
+
+  worker-ingest:
+    build: .
+    container_name: dc_worker_ingest
+    command: ["python", "-m", "app.workers.sftp_ingest"]
+    depends_on:
+      sftp:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SFTP_HOST:        sftp
+      SFTP_PORT:        "22"
+      SFTP_USERNAME:    scanner
+      SFTP_PASSWORD:    password123
+      MINIO_ENDPOINT:   minio:9000
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: password123
+      REDIS_URL:        redis://redis:6379/0
+    restart: unless-stopped
+
+volumes:
+  sftp-data:
+  minio-data:
+  redis-data:
