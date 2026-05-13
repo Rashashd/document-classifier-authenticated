@@ -5,163 +5,82 @@ __pycache__/
 *.so
 .Python
 
-# Virtual environments
-env/
-venv/
-.venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Poetry / uv (lockfile is committed, but not the virtual env)
-.poetry/
-.uv/
-
-# Distribution / packaging
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Testing
-.pytest_cache/
-.tox/
-.coverage
-.coverage.*
-.htmlcov/
-.mypy_cache/
-.ruff_cache/
-
-# Alembic (only the versions folder should be committed, not temporary files)
-*.pyc
-*.pyo
-*.pyd
-app/db/migrations/__pycache__/
-
-# Logs
-*.log
-logs/
-
-# Environment variables & secrets (do not commit real secrets)
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-*.crt
-
-# Database files (if using local SQLite, not in this project but just in case)
-*.db
-*.sqlite
-*.sqlite3
-
-# IDE / Editor
-.vscode/
-.idea/
-*.egg-info/
-.eggs/
-build/
-dist/
-.installed.cfg
-*.egg
-MANIFEST
-
-# ----- uv / virtualenvs -----
+# ----- Virtual environments -----
 .venv/
 venv/
 env/
 .python-version
 
-# ----- Test & coverage artefacts -----
+# ----- uv -----
+.uv/
+
+# ----- Distribution / packaging -----
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.installed.cfg
+
+# ----- Testing & coverage -----
+.pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
-.cache
-.pytest_cache/
+coverage.xml
 .mypy_cache/
 .ruff_cache/
 .tox/
-.hypothesis/
-coverage.xml
-*.cover
-nosetests.xml
-.benchmarks/
+.cache
 
-# ----- IDE / editor -----
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Model artifacts – these go through Git LFS, but ignore raw checkouts without LFS
-*.pt
-*.pth
-*.pkl
-*.h5
-*.joblib
-app/classifier/models/*.pt
-!app/classifier/models/.gitattributes
-
-# Large dataset or golden images (but golden images are committed, so ignore only the full dataset)
-golden_images/
-!app/classifier/eval/golden_images/
-*.tiff
-*.tif
-!app/classifier/eval/golden_images/*.tiff
-
-# Local development overrides
-*.local.yaml
-*.local.yml
-
-# OS metadata
-Thumbs.db
-
-# ----- Project: secrets & local config -----
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-
-# ----- Docker / runtime data volumes -----
-# Local volume mounts and runtime data must never enter the repo.
-minio-data/
-redis-data/
-sftp-data/
-postgres-data/
-vault-data/
-docker-data/
-
-# ----- Classifier artefacts NOT yet on git LFS -----
-# Tracked via git LFS once Person A wires it up; raw downloads must not leak.
-app/classifier/datasets/
-app/classifier/checkpoints/
+# ----- Alembic -----
+app/db/migrations/__pycache__/
 
 # ----- Logs -----
 *.log
 logs/
 
-# ----- Node / frontend (until that team sets their own) -----
+# ----- Secrets & local config -----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# ----- IDE / editor -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- Docker / runtime data volumes -----
+minio-data/
+redis-data/
+sftp-data/
+postgres-data/
+vault-data/
+
+# ----- Classifier model artefacts (pending Git LFS setup by Person A) -----
+*.pt
+*.pth
+*.pkl
+app/classifier/datasets/
+app/classifier/checkpoints/
+
+# ----- TIFF / image drops (golden set in eval/ is explicitly committed) -----
+*.tiff
+*.tif
+!app/classifier/eval/golden_images/*.tiff
+
+# ----- Node / frontend -----
 frontend/node_modules/
 frontend/dist/
 frontend/.next/
 
+# ----- Local -----
 plan/
 CLAUDE.md
