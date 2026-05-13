@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import logging
+import structlog
 import posixpath
 from typing import Iterator
 
@@ -11,7 +11,7 @@ import paramiko
 from app.infra.exceptions import SFTPConnectError
 
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 _TIFF_SUFFIXES: tuple[str, ...] = (".tiff", ".tif")
 
