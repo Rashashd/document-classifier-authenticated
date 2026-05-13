@@ -46,15 +46,17 @@ jobs:
         run: uv pip install --system .
 
       - name: Install test tooling
-        run: uv pip install --system pytest pytest-asyncio
+        # Pillow is needed by scripts/generate_test_drops.py which the
+        # e2e ingestion test imports as a fixture helper.
+        run: uv pip install --system pytest pytest-asyncio pillow
 
-      # The integration tests in tests/integration/ talk to real
+      # Integration tests in tests/integration/ talk to real db /
       # redis / minio / sftp containers. We bring those (and only
       # those) up via the project's compose file. The worker-ingest
-      # service is deliberately NOT started here — Phase-2 worker
+      # service is deliberately NOT started here — the Phase-2 worker
       # requires Vault, which CI does not provision yet.
       - name: Start infra services
-        run: docker compose up -d redis minio sftp
+        run: docker compose up -d db redis minio sftp
 
       - name: Wait for services to be healthy
         run: |
@@ -72,7 +74,18 @@ jobs:
           docker compose logs --tail=100
           exit 1
 
+      # Apply the schema to the runner's local Postgres. get_settings()
+      # in env.py requires DATABASE_URL and VAULT_TOKEN; alembic itself
+      # never talks to Vault, so VAULT_TOKEN gets a placeholder.
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app
+          VAULT_TOKEN:  ci-noop
+        run: alembic upgrade head
+
       - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app
         run: pytest tests/
 
       - name: Tear down infra services

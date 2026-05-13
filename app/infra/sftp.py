@@ -125,6 +125,12 @@ class SFTPClient:
         self._require_session()
         self._sftp.remove(remote_path)  # type: ignore[union-attr]
 
+    def write_file(self, remote_path: str, data: bytes) -> None:
+        """Write ``data`` to ``remote_path``, overwriting if it exists."""
+        self._require_session()
+        with self._sftp.open(remote_path, mode="wb") as handle:  # type: ignore[union-attr]
+            handle.write(data)
+
     def move_file(self, src: str, dest: str) -> None:
         """Move ``src`` to ``dest``. Same filesystem only (uses SFTP rename)."""
         self._require_session()

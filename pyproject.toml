@@ -77,6 +77,9 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Add the repo root to sys.path so tests can import from scripts/
+# (the e2e ingestion test imports drop_files from scripts/generate_test_drops.py).
+pythonpath = ["."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
