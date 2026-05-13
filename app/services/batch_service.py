@@ -16,7 +16,7 @@ class BatchService:
         self._session = session
         self._repo    = BatchRepository(session)
 
-    async def create_pending_batch(self, filename: str, minio_path: str) -> uuid.UUID:
+    async def create_pending_batch(self, sftp_path: str, owner_id: uuid.UUID) -> uuid.UUID:
         """Insert a PENDING batch and return its id.
 
         Returns just the id rather than a full BatchRead because the
@@ -24,6 +24,6 @@ class BatchService:
         to attach to its enqueued inference job. Read endpoints in
         the API layer build BatchRead from the ORM row directly.
         """
-        batch = await self._repo.create_batch(filename=filename, minio_path=minio_path)
+        batch = await self._repo.create_batch(sftp_path=sftp_path, owner_id=owner_id)
         await self._session.commit()
         return batch.id

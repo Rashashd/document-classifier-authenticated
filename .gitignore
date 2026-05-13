@@ -8,20 +8,39 @@ __pycache__/
 .eggs/
 build/
 dist/
+develop-eggs/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# ----- PyInstaller -----
+*.manifest
+*.spec
 
 # ----- uv / virtualenvs -----
 .venv/
 venv/
 env/
+ENV/
+env.bak/
+venv.bak/
 .python-version
+.poetry/
+.uv/
 
 # ----- Test & coverage artefacts -----
 .coverage
 .coverage.*
 htmlcov/
+.htmlcov/
 .cache
 .pytest_cache/
 .mypy_cache/
@@ -33,6 +52,9 @@ coverage.xml
 nosetests.xml
 .benchmarks/
 
+# ----- Alembic -----
+app/db/migrations/__pycache__/
+
 # ----- IDE / editor -----
 .idea/
 .vscode/
@@ -40,6 +62,7 @@ nosetests.xml
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
 # ----- Project: secrets & local config -----
 # `.env.example` IS tracked; the real `.env` (Vault root token, ports) is not.
@@ -48,6 +71,12 @@ nosetests.xml
 !.env.example
 *.pem
 *.key
+*.crt
+
+# ----- Local SQLite (if anyone enables it for local debug) -----
+*.db
+*.sqlite
+*.sqlite3
 
 # ----- Docker / runtime data volumes -----
 # Local volume mounts and runtime data must never enter the repo.
@@ -57,11 +86,31 @@ sftp-data/
 postgres-data/
 vault-data/
 docker-data/
+*.pid
+docker-compose.override.yml
 
-# ----- Classifier artefacts NOT yet on git LFS -----
-# Tracked via git LFS once Person A wires it up; raw downloads must not leak.
+# ----- Classifier artefacts (committed via git LFS only) -----
+*.pt
+*.pth
+*.pkl
+*.h5
+*.joblib
 app/classifier/datasets/
 app/classifier/checkpoints/
+app/classifier/models/*.pt
+!app/classifier/models/.gitattributes
+
+# ----- TIFFs are never committed except for the golden set -----
+*.tiff
+*.tif
+golden_images/
+!app/classifier/eval/golden_images/
+!app/classifier/eval/golden_images/*.tiff
+!app/classifier/eval/golden_images/*.tif
+
+# ----- Local override files -----
+*.local.yaml
+*.local.yml
 
 # ----- Logs -----
 *.log
@@ -71,9 +120,6 @@ logs/
 frontend/node_modules/
 frontend/dist/
 frontend/.next/
-plan/
-.env
-__pycache__/
 
-.venv/
-.pytest_cache/
+# ----- Misc local working folders -----
+plan/
