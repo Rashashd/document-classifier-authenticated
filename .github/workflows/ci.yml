@@ -50,12 +50,32 @@ jobs:
         # e2e ingestion test imports as a fixture helper.
         run: uv pip install --system pytest pytest-asyncio pillow
 
+      # CI has no .env. Write only the fields that Settings declares
+      # (extra="forbid" rejects anything not in the model). Compose-only
+      # vars (POSTGRES_*, MINIO_*, SFTP_*) go on the compose step's env:
+      # so they never touch Pydantic Settings.
+      - name: Create .env for CI
+        run: |
+          cat > .env << 'EOF'
+          DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/app
+          VAULT_TOKEN=ci-noop
+          EOF
+
       # Integration tests in tests/integration/ talk to real db /
       # redis / minio / sftp containers. We bring those (and only
       # those) up via the project's compose file. The worker-ingest
       # service is deliberately NOT started here — the Phase-2 worker
       # requires Vault, which CI does not provision yet.
       - name: Start infra services
+        env:
+          POSTGRES_USER:     postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB:       app
+          MINIO_ROOT_USER:   admin
+          MINIO_ROOT_PASSWORD: password123
+          SFTP_USER:         scanner
+          SFTP_PASSWORD:     password123
+          VAULT_TOKEN:       ci-noop
         run: docker compose up -d db redis minio sftp
 
       - name: Wait for services to be healthy
@@ -77,15 +97,19 @@ jobs:
       # Apply the schema to the runner's local Postgres. get_settings()
       # in env.py requires DATABASE_URL and VAULT_TOKEN; alembic itself
       # never talks to Vault, so VAULT_TOKEN gets a placeholder.
+      # Port 5433: compose maps 5433→5432 to avoid conflicts with a
+      # local Postgres on dev machines; CI has no local Postgres but
+      # we keep the same port so compose config is identical everywhere.
       - name: Run database migrations
         env:
-          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
           VAULT_TOKEN:  ci-noop
         run: alembic upgrade head
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/app
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
+          VAULT_TOKEN:  ci-noop
         run: pytest tests/
 
       - name: Tear down infra services
