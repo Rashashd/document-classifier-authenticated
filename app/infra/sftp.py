@@ -1,4 +1,4 @@
-"""SFTP poller adapter (paramiko). Not thread-safe — single-threaded use only."""
+"""SFTP adapter (paramiko). Not thread-safe — single-threaded use only."""
 
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ _TIFF_SUFFIXES: tuple[str, ...] = (".tiff", ".tif")
 
 
 class SFTPClient:
-    """Long-lived SFTP session that fetches *.tiff drops and deletes them.
+    """Long-lived SFTP session exposing the primitives the ingest worker needs.
 
-    Lifecycle: construct → ``connect()`` once → call
-    ``list_and_download_new_files()`` each polling tick → ``close()``
-    on shutdown. Usable as a context manager.
+    Lifecycle: construct → ``connect()`` once → call any primitive
+    per polling tick → ``close()`` on shutdown. Usable as a context
+    manager.
     """
 
     def __init__(
@@ -37,6 +37,8 @@ class SFTPClient:
         self._password = password
         self._transport: paramiko.Transport | None  = None
         self._sftp:      paramiko.SFTPClient | None = None
+
+    # -- session lifecycle ----------------------------------------------------
 
     def connect(self) -> None:
         """Open the Transport+SFTPClient session. Idempotent."""
@@ -89,59 +91,87 @@ class SFTPClient:
     def __exit__(self, exc_type, exc, tb) -> None:
         self.close()
 
+    # -- primitives -----------------------------------------------------------
+
+    def list_dir(self, remote_dir: str) -> list[str]:
+        """Basenames in ``remote_dir``. Empty list if the directory is missing."""
+        self._require_session()
+        try:
+            return self._sftp.listdir(remote_dir)  # type: ignore[union-attr]
+        except FileNotFoundError:
+            logger.warning("sftp: remote_dir %r not found", remote_dir)
+            return []
+
+    def size_of(self, remote_path: str) -> int:
+        """Return the size of ``remote_path`` in bytes."""
+        self._require_session()
+        return self._sftp.stat(remote_path).st_size  # type: ignore[union-attr,return-value]
+
+    def read_partial(self, remote_path: str, n_bytes: int) -> bytes:
+        """Return the first ``n_bytes`` of ``remote_path``."""
+        self._require_session()
+        with self._sftp.open(remote_path, mode="rb") as handle:  # type: ignore[union-attr]
+            return handle.read(n_bytes)
+
+    def read_file(self, remote_path: str) -> bytes:
+        """Return the full bytes of ``remote_path``."""
+        self._require_session()
+        with self._sftp.open(remote_path, mode="rb") as handle:  # type: ignore[union-attr]
+            handle.set_pipelined(True)
+            return handle.read()
+
+    def delete_file(self, remote_path: str) -> None:
+        """Remove ``remote_path`` from the server."""
+        self._require_session()
+        self._sftp.remove(remote_path)  # type: ignore[union-attr]
+
+    def move_file(self, src: str, dest: str) -> None:
+        """Move ``src`` to ``dest``. Same filesystem only (uses SFTP rename)."""
+        self._require_session()
+        self._sftp.rename(src, dest)  # type: ignore[union-attr]
+
+    # -- convenience (legacy, kept for the existing integration test) ---------
+
     def list_and_download_new_files(
         self,
         remote_dir: str,
     ) -> Iterator[tuple[str, bytes]]:
         """Yield ``(filename, bytes)`` for each *.tiff in ``remote_dir``.
 
-        Reads each file, deletes it from the server on successful read,
-        and yields the payload. Delete-after-read gives at-most-once
-        delivery — the downstream inference worker MUST dedupe on
-        ``(batch_id, filename)``.
+        Reads then deletes; downstream MUST dedupe on filename
+        (at-most-once delivery).
 
-        ``remote_dir`` is the path inside the SFTP session — atmoz/sftp
-        chroots ``scanner`` to ``/home/scanner``, so use ``/upload``
-        (not ``/home/scanner/upload``).
+        ``remote_dir`` is the in-session path — atmoz/sftp chroots
+        ``scanner`` so the share appears at ``/upload``, not
+        ``/home/scanner/upload``.
         """
-        if self._sftp is None:
-            raise RuntimeError(
-                "SFTPClient: connect() must be called before "
-                "list_and_download_new_files()."
-            )
-
-        try:
-            entries = self._sftp.listdir(remote_dir)
-        except FileNotFoundError:
-            logger.warning("sftp: remote_dir %r not found, skipping tick", remote_dir)
-            return
-
-        for name in entries:
+        for name in self.list_dir(remote_dir):
             if not name.lower().endswith(_TIFF_SUFFIXES):
                 continue
 
-            # posixpath, not os.path: SFTP paths are always POSIX.
             remote_path = posixpath.join(remote_dir, name)
 
             try:
-                with self._sftp.open(remote_path, mode="rb") as handle:
-                    handle.set_pipelined(True)
-                    data: bytes = handle.read()
-            except Exception:  # noqa: BLE001 — polling-tick boundary
+                data = self.read_file(remote_path)
+            except Exception:  # noqa: BLE001
                 logger.exception(
                     "sftp: failed to read %r, leaving for retry", remote_path
                 )
                 continue
 
             try:
-                self._sftp.remove(remote_path)
+                self.delete_file(remote_path)
                 logger.info("sftp: read+deleted %r (%d bytes)", remote_path, len(data))
             except Exception:  # noqa: BLE001
-                # Read succeeded, delete failed: yield anyway so we
-                # don't lose data; downstream dedupes.
                 logger.exception(
                     "sftp: read %r ok but delete failed; downstream MUST dedupe",
                     remote_path,
                 )
 
             yield name, data
+
+    # -- internal -------------------------------------------------------------
+
+    def _require_session(self) -> None:
+        if self._sftp is None:
+            raise RuntimeError("SFTPClient: connect() must be called first.")
