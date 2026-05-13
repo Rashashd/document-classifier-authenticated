@@ -1,4 +1,3 @@
-# app/db/models.py
 from __future__ import annotations
 
 import uuid
@@ -17,9 +16,7 @@ class Base(DeclarativeBase):
     pass
 
 
-# ------------------------------------------------------------
 # User – uses fastapi-users base, but we override id column
-# ------------------------------------------------------------
 class User(SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "users"
 
@@ -37,9 +34,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     audit_entries: Mapped[list["AuditEntry"]] = relationship(back_populates="actor", lazy="selectin")
 
 
-# ------------------------------------------------------------
 # Audit log
-# ------------------------------------------------------------
 class AuditEntry(Base):
     __tablename__ = "audit_entries"
 
@@ -59,9 +54,7 @@ class AuditEntry(Base):
     actor: Mapped["User | None"] = relationship(back_populates="audit_entries")
 
 
-# ------------------------------------------------------------
 # Casbin rule table (shape required by casbin-sqlalchemy-adapter)
-# ------------------------------------------------------------
 class CasbinRule(Base):
     __tablename__ = "casbin_rule"
 
@@ -75,9 +68,7 @@ class CasbinRule(Base):
     v5: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
-# ------------------------------------------------------------
 # Batch
-# ------------------------------------------------------------
 class Batch(Base):
     __tablename__ = "batches"
 
@@ -114,9 +105,7 @@ class Batch(Base):
         return len(self.predictions)
 
 
-# ------------------------------------------------------------
 # Prediction
-# ------------------------------------------------------------
 class Prediction(Base):
     __tablename__ = "predictions"
 
