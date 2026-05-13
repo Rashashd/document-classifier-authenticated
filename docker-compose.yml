@@ -38,10 +38,24 @@ services:
   vault-init:
     image: hashicorp/vault
     container_name: dc_vault_init
+    # One-shot. Seeds all three secrets the application reads at startup:
+    #   - secret/jwt    consumed by app/core/lifespan.py (JWT signing key)
+    #   - secret/sftp   consumed by app/workers/sftp_ingest.py (paramiko creds)
+    #   - secret/minio  consumed by app/workers/sftp_ingest.py (S3 creds)
+    # Single source of truth is .env on the host; this service mirrors those
+    # values into Vault so the application never reads passwords from env.
     entrypoint: >
-      sh -c "vault kv put -address=http://vault:8200 secret/jwt secret=dev-signing-key-change-in-prod"
+      sh -c "
+      vault kv put -address=http://vault:8200 secret/jwt   secret=dev-signing-key-change-in-prod &&
+      vault kv put -address=http://vault:8200 secret/sftp  username=$$SFTP_USER       password=$$SFTP_PASSWORD &&
+      vault kv put -address=http://vault:8200 secret/minio access_key=$$MINIO_ROOT_USER secret_key=$$MINIO_ROOT_PASSWORD
+      "
     environment:
-      VAULT_TOKEN: ${VAULT_TOKEN}
+      VAULT_TOKEN:         ${VAULT_TOKEN}
+      SFTP_USER:           ${SFTP_USER}
+      SFTP_PASSWORD:       ${SFTP_PASSWORD}
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     depends_on:
       vault:
         condition: service_healthy
