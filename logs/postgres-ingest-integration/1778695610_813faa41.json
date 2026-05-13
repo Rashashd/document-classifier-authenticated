@@ -1,0 +1,44 @@
+{
+  "batches_in_db": [
+    {
+      "id": "065b3709-c147-4782-bb0b-a6e15c7f0f2a",
+      "owner_id": null,
+      "sftp_path": "/upload/valid_document.tiff",
+      "status": "pending"
+    }
+  ],
+  "expected_pending_batches": 1,
+  "finished_at": "2026-05-13T18:06:50.250768+00:00",
+  "input_files": [
+    "valid_document.tiff",
+    "malicious_payload.tiff",
+    "honest_mistake.csv",
+    "empty_noise.tiff"
+  ],
+  "passed": true,
+  "per_file": [
+    {
+      "error": null,
+      "filename": "valid_document.tiff",
+      "outcome": "processed"
+    },
+    {
+      "error": null,
+      "filename": "malicious_payload.tiff",
+      "outcome": "processed"
+    },
+    {
+      "error": null,
+      "filename": "honest_mistake.csv",
+      "outcome": "processed"
+    },
+    {
+      "error": null,
+      "filename": "empty_noise.tiff",
+      "outcome": "processed"
+    }
+  ],
+  "run_id": "813faa41-68c7-43c8-bacc-dcdb198f00cf",
+  "started_at": "2026-05-13T18:06:50.122849+00:00",
+  "test_name": "postgres-integration"
+}

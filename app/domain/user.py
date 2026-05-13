@@ -5,17 +5,16 @@ from datetime import datetime
 from enum import Enum
 
 from fastapi_users import schemas
-from pydantic import Field
 
 
 class UserRole(str, Enum):
-    admin    = "admin"
+    admin = "admin"
     reviewer = "reviewer"
-    auditor  = "auditor"
+    auditor = "auditor"
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
-    role:       UserRole
+    role: UserRole
     created_at: datetime
 
 

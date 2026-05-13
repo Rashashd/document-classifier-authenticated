@@ -4,12 +4,37 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.egg-info/
+.eggs/
+build/
+dist/
+develop-eggs/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+.installed.cfg
+*.egg
+MANIFEST
 
-# ----- Virtual environments -----
+# ----- PyInstaller -----
+*.manifest
+*.spec
+
+# ----- uv / virtualenvs -----
 .venv/
 venv/
 env/
+ENV/
+env.bak/
+venv.bak/
 .python-version
+.poetry/
+.uv/
 
 # ----- uv -----
 .uv/
@@ -27,6 +52,9 @@ dist/
 .coverage
 .coverage.*
 htmlcov/
+.htmlcov/
+.cache
+.pytest_cache/
 coverage.xml
 .mypy_cache/
 .ruff_cache/
@@ -36,9 +64,14 @@ coverage.xml
 # ----- Alembic -----
 app/db/migrations/__pycache__/
 
-# ----- Logs -----
-*.log
-logs/
+# ----- IDE / editor -----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
 # ----- Secrets & local config -----
 .env
@@ -48,14 +81,10 @@ logs/
 *.key
 *.crt
 
-# ----- IDE / editor -----
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
+# ----- Local SQLite (if anyone enables it for local debug) -----
+*.db
+*.sqlite
+*.sqlite3
 
 # ----- Docker / runtime data volumes -----
 minio-data/
@@ -63,18 +92,38 @@ redis-data/
 sftp-data/
 postgres-data/
 vault-data/
+docker-data/
+*.pid
+docker-compose.override.yml
 
-# ----- Classifier model artefacts (pending Git LFS setup by Person A) -----
+# ----- Classifier artefacts (committed via git LFS only) -----
 *.pt
 *.pth
 *.pkl
+*.h5
+*.joblib
 app/classifier/datasets/
 app/classifier/checkpoints/
+app/classifier/models/*.pt
+!app/classifier/models/.gitattributes
 
-# ----- TIFF / image drops (golden set in eval/ is explicitly committed) -----
+# ----- TIFFs are never committed except for the golden set -----
 *.tiff
 *.tif
+golden_images/
+!app/classifier/eval/golden_images/
 !app/classifier/eval/golden_images/*.tiff
+!app/classifier/eval/golden_images/*.tif
+
+# ----- Local override files -----
+*.local.yaml
+*.local.yml
+
+# ----- Logs -----
+*.log
+# logs/ holds JSON test-run records (per-script subdirs, per-run files);
+# we keep them in source so historical runs are reviewable.
+!logs/
 
 # ----- Node / frontend -----
 frontend/node_modules/

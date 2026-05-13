@@ -34,7 +34,9 @@ async def lifespan(app: FastAPI):
         secret = vault.get_secret(secret_path)
         jwt_secret: str = secret["secret"]
     except Exception as exc:
-        logger.critical("refuse_to_boot", reason="vault_unreachable_or_jwt_missing", error=str(exc))
+        logger.critical(
+            "refuse_to_boot", reason="vault_unreachable_or_jwt_missing", error=str(exc)
+        )
         sys.exit(1)
 
     app.state.vault = vault

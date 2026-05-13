@@ -4,7 +4,11 @@ import uuid
 
 from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
-from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
+from fastapi_users.authentication import (
+    AuthenticationBackend,
+    BearerTransport,
+    JWTStrategy,
+)
 from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +25,9 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     """Thin user manager. JWT secret is injected at startup via app.state."""
 
-    async def on_after_register(self, user: User, request: Request | None = None) -> None:
+    async def on_after_register(
+        self, user: User, request: Request | None = None
+    ) -> None:
         pass  # hook available for future audit logging
 
 
@@ -41,10 +47,12 @@ async def get_user_manager(
 
 # JWT strategy (secret resolved from app.state at runtime)
 
+
 def get_jwt_strategy(request: Request) -> JWTStrategy:
     return JWTStrategy(
         secret=_get_jwt_secret(request),
-        lifetime_seconds=request.app.state.settings.jwt_access_token_expire_minutes * 60,
+        lifetime_seconds=request.app.state.settings.jwt_access_token_expire_minutes
+        * 60,
         algorithm=request.app.state.settings.jwt_algorithm,
     )
 

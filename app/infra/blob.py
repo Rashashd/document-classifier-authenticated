@@ -23,14 +23,14 @@ class MinioBlobClient:
 
     def __init__(
         self,
-        endpoint:   str,
+        endpoint: str,
         access_key: str,
         secret_key: str,
         *,
         secure: bool = False,
     ) -> None:
         self._endpoint = endpoint
-        self._client   = Minio(
+        self._client = Minio(
             endpoint=endpoint,
             access_key=access_key,
             secret_key=secret_key,
@@ -53,7 +53,7 @@ class MinioBlobClient:
         file_name: str,
         file_stream: bytes,
         *,
-        bucket:       str = DEFAULT_BUCKET,
+        bucket: str = DEFAULT_BUCKET,
         content_type: str = "application/octet-stream",
     ) -> str:
         """Upload bytes and return the ``s3://`` URI.

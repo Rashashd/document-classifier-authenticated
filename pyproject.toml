@@ -6,49 +6,40 @@ dependencies = [
     # Web framework
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
-    
     # Auth
     "fastapi-users[sqlalchemy]>=13.0.0",
-    
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.13.0",
     "asyncpg>=0.29.0",
-    
     # Settings & validation
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "email-validator>=2.1.0",
-    
     # Vault
     "hvac>=2.1.0",
-    
     # RBAC
     "casbin>=1.36.0",
     "casbin-async-sqlalchemy-adapter>=0.4.0",
-    
     # Caching
     "fastapi-cache2[redis]>=0.2.1",
 
     # jinja2 is a transitive runtime dep we have to declare explicitly:
-    # fastapi-cache2 imports from starlette.templating, and starlette 1.0.0 made jinja2 a hard import-time requirement of that module
-    # (it used to be lazy). Without this, `from fastapi_cache import FastAPICache` raises ImportError.
-    # Tracking upstream — when fastapi-cache2 stops touching starlette.templating, drop this.
+    # fastapi-cache2 imports from starlette.templating, and starlette
+    # 1.0.0 made jinja2 a hard import-time requirement of that module
+    # (it used to be lazy). Without this, `from fastapi_cache import
+    # FastAPICache` raises ImportError. Drop this when fastapi-cache2
+    # stops touching starlette.templating.
     "jinja2>=3.1.0",
-
     # Queue (redis version is constrained by fastapi-cache2 to <5)
     "rq>=1.16.0",
     "redis>=4.2.0",
-    
     # Storage
     "minio>=7.2.0",
-
     # SFTP client (used by app/infra/sftp.py)
     "paramiko>=3.4.0",
-
     # HTTP client (async — no requests/time.sleep)
     "httpx>=0.27.0",
-    
     # Structured logging
     "structlog>=24.0.0",
 ]
@@ -87,6 +78,9 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Add the repo root to sys.path so tests can import from scripts/
+# (the e2e ingestion test imports drop_files from scripts/generate_test_drops.py).
+pythonpath = ["."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

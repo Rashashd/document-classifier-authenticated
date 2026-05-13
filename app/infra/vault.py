@@ -21,4 +21,6 @@ class VaultClient:
             )
             return response["data"]["data"]
         except Exception as exc:
-            raise RuntimeError(f"Vault secret read failed for path '{path}': {exc}") from exc
+            raise RuntimeError(
+                f"Vault secret read failed for path '{path}': {exc}"
+            ) from exc

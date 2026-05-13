@@ -8,14 +8,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class BatchStatus(str, Enum):
-    pending    = "pending"
+    pending = "pending"
     processing = "processing"
-    done       = "done"
-    failed     = "failed"
+    done = "done"
+    failed = "failed"
 
 
 class BatchBase(BaseModel):
-    sftp_path: str = Field(description="Original SFTP drop path, e.g. /drop/2026-05-12/scan.tif")
+    sftp_path: str = Field(
+        description="Original SFTP drop path, e.g. /drop/2026-05-12/scan.tif"
+    )
 
 
 class BatchCreate(BatchBase):
@@ -25,14 +27,14 @@ class BatchCreate(BatchBase):
 class BatchRead(BatchBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id:             uuid.UUID
-    status:         BatchStatus
-    owner_id:       uuid.UUID
+    id: uuid.UUID
+    status: BatchStatus
+    owner_id: uuid.UUID
     document_count: int
-    created_at:     datetime
-    updated_at:     datetime
+    created_at: datetime
+    updated_at: datetime
 
 
 class BatchUpdate(BaseModel):
-    status:         BatchStatus | None = None
-    document_count: int | None        = None
+    status: BatchStatus | None = None
+    document_count: int | None = None

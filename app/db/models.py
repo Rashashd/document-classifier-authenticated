@@ -23,15 +23,21 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(
+        String(320), unique=True, index=True, nullable=False
+    )
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="reviewer")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     # Relationships
-    batches: Mapped[list["Batch"]] = relationship(back_populates="owner", lazy="selectin")
-    audit_entries: Mapped[list["AuditEntry"]] = relationship(back_populates="actor", lazy="selectin")
+    batches: Mapped[list["Batch"]] = relationship(
+        back_populates="owner", lazy="selectin"
+    )
+    audit_entries: Mapped[list["AuditEntry"]] = relationship(
+        back_populates="actor", lazy="selectin"
+    )
 
 
 # Audit log
@@ -76,8 +82,10 @@ class Batch(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     sftp_path: Mapped[str] = mapped_column(String, nullable=False)
-    owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    # Nullable: scanner-originated batches have no JWT subject. API-
+    # originated batches set this from the JWT subject.
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     status: Mapped[BatchStatus] = mapped_column(
         String(32),
@@ -95,7 +103,7 @@ class Batch(Base):
         nullable=False,
     )
 
-    owner: Mapped["User"] = relationship(back_populates="batches")
+    owner: Mapped["User | None"] = relationship(back_populates="batches")
     predictions: Mapped[list["Prediction"]] = relationship(
         back_populates="batch", lazy="selectin"
     )

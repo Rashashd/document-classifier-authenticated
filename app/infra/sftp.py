@@ -26,17 +26,17 @@ class SFTPClient:
 
     def __init__(
         self,
-        host:     str,
-        port:     int,
+        host: str,
+        port: int,
         username: str,
         password: str,
     ) -> None:
-        self._host     = host
-        self._port     = port
+        self._host = host
+        self._port = port
         self._username = username
         self._password = password
-        self._transport: paramiko.Transport | None  = None
-        self._sftp:      paramiko.SFTPClient | None = None
+        self._transport: paramiko.Transport | None = None
+        self._sftp: paramiko.SFTPClient | None = None
 
     # -- session lifecycle ----------------------------------------------------
 
@@ -52,7 +52,9 @@ class SFTPClient:
         except (paramiko.SSHException, OSError) as exc:
             logger.exception(
                 "sftp: connection failed to %s:%d as %r",
-                self._host, self._port, self._username,
+                self._host,
+                self._port,
+                self._username,
             )
             raise SFTPConnectError(
                 f"could not connect to {self._host}:{self._port} as "
@@ -66,8 +68,10 @@ class SFTPClient:
             )
 
         self._transport = transport
-        self._sftp      = sftp
-        logger.info("sftp: connected to %s:%d as %r", self._host, self._port, self._username)
+        self._sftp = sftp
+        logger.info(
+            "sftp: connected to %s:%d as %r", self._host, self._port, self._username
+        )
 
     def close(self) -> None:
         """Tear down the session. Safe to call multiple times."""
@@ -124,6 +128,12 @@ class SFTPClient:
         """Remove ``remote_path`` from the server."""
         self._require_session()
         self._sftp.remove(remote_path)  # type: ignore[union-attr]
+
+    def write_file(self, remote_path: str, data: bytes) -> None:
+        """Write ``data`` to ``remote_path``, overwriting if it exists."""
+        self._require_session()
+        with self._sftp.open(remote_path, mode="wb") as handle:  # type: ignore[union-attr]
+            handle.write(data)
 
     def move_file(self, src: str, dest: str) -> None:
         """Move ``src`` to ``dest``. Same filesystem only (uses SFTP rename)."""
