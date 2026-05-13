@@ -13,12 +13,12 @@ from pydantic import BaseModel, Field
 class InferenceJob(BaseModel):
     """Payload enqueued by sftp_ingest worker; consumed by inference worker."""
 
-    job_id:      uuid.UUID = Field(default_factory=uuid.uuid4)
-    batch_id:    uuid.UUID
-    blob_path:   str = Field(
+    job_id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    batch_id: uuid.UUID
+    blob_path: str = Field(
         description="MinIO object key for the uploaded document, e.g. 'batches/{batch_id}/scan.tif'"
     )
-    filename:    str = Field(description="Original filename from the SFTP drop.")
+    filename: str = Field(description="Original filename from the SFTP drop.")
     enqueued_at: datetime = Field(
         description="UTC timestamp set by the ingest worker at enqueue time."
     )

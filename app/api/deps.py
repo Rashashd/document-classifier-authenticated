@@ -15,15 +15,13 @@ def require_role(*roles: str):
     Raises 401 if no valid token is present (via get_current_user).
     Raises 403 if the authenticated user's role is not permitted.
     """
+
     async def _dependency(
         request: Request,
         current_user: User = Depends(get_current_user),
     ) -> User:
         enforcer = request.app.state.enforcer
-        allowed = any(
-            enforcer.enforce(current_user.role, role)
-            for role in roles
-        )
+        allowed = any(enforcer.enforce(current_user.role, role) for role in roles)
         if not allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

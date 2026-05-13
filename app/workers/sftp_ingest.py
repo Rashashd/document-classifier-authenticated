@@ -24,31 +24,32 @@ import paramiko
 import structlog
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
-from app.infra.blob       import MinioBlobClient
+from app.infra.blob import MinioBlobClient
 from app.infra.exceptions import (
     BlobUnavailableError,
     QueueUnavailableError,
     SFTPConnectError,
 )
-from app.infra.queue      import RQClient
-from app.infra.sftp       import SFTPClient
-from app.infra.vault      import VaultClient
+from app.infra.queue import RQClient
+from app.infra.sftp import SFTPClient
+from app.infra.vault import VaultClient
 from app.services.batch_service import BatchService
 
 
 # -- configuration -----------------------------------------------------------
 
-POLL_INTERVAL_SECONDS: int   = 5
-MAX_FILE_SIZE_BYTES:   int   = 50 * 1024 * 1024
-REMOTE_UPLOAD_DIR:     str   = "/upload"
-REMOTE_QUARANTINE_DIR: str   = "/quarantine"
-TIFF_SUFFIXES:         tuple[str, ...] = (".tiff", ".tif")
-TIFF_MAGIC_BYTES:      tuple[bytes, ...] = (b"II*\x00", b"MM\x00*")
-QUEUE_NAME:            str   = "classification_queue"
-INFERENCE_FUNC_PATH:   str   = "app.workers.inference.run"
+POLL_INTERVAL_SECONDS: int = 5
+MAX_FILE_SIZE_BYTES: int = 50 * 1024 * 1024
+REMOTE_UPLOAD_DIR: str = "/upload"
+REMOTE_QUARANTINE_DIR: str = "/quarantine"
+TIFF_SUFFIXES: tuple[str, ...] = (".tiff", ".tif")
+TIFF_MAGIC_BYTES: tuple[bytes, ...] = (b"II*\x00", b"MM\x00*")
+QUEUE_NAME: str = "classification_queue"
+INFERENCE_FUNC_PATH: str = "app.workers.inference.run"
 
 
 # -- logging -----------------------------------------------------------------
+
 
 def configure_logging() -> None:
     """Route both structlog and stdlib logs through a JSON renderer.
@@ -64,7 +65,8 @@ def configure_logging() -> None:
     ]
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -91,6 +93,7 @@ log = structlog.get_logger("sftp_ingest")
 
 # -- secrets ----------------------------------------------------------------
 
+
 def fetch_vault_secrets() -> tuple[dict, dict]:
     """Read SFTP and MinIO credential dicts from Vault. Exits the process on failure.
 
@@ -100,18 +103,18 @@ def fetch_vault_secrets() -> tuple[dict, dict]:
     event and exit so the orchestrator can surface the boot failure
     rather than a degraded worker silently dropping files.
     """
-    addr  = os.environ.get("VAULT_ADDR", "http://vault:8200")
+    addr = os.environ.get("VAULT_ADDR", "http://vault:8200")
     token = os.environ.get("VAULT_TOKEN")
     if not token:
         log.critical("vault.boot.missing_token")
         sys.exit(1)
 
-    sftp_path  = os.environ.get("VAULT_SFTP_PATH",  "sftp")
+    sftp_path = os.environ.get("VAULT_SFTP_PATH", "sftp")
     minio_path = os.environ.get("VAULT_MINIO_PATH", "minio")
 
     try:
-        vault       = VaultClient(addr=addr, token=token)
-        sftp_creds  = vault.get_secret(sftp_path)
+        vault = VaultClient(addr=addr, token=token)
+        sftp_creds = vault.get_secret(sftp_path)
         minio_creds = vault.get_secret(minio_path)
     except Exception as exc:
         log.critical(
@@ -128,9 +131,10 @@ def fetch_vault_secrets() -> tuple[dict, dict]:
 
 # -- factories ---------------------------------------------------------------
 
+
 def build_sftp(creds: dict) -> SFTPClient:
     return SFTPClient(
-        host=os.environ.get("SFTP_HOST",    "sftp"),
+        host=os.environ.get("SFTP_HOST", "sftp"),
         port=int(os.environ.get("SFTP_PORT", "22")),
         username=creds["username"],
         password=creds["password"],
@@ -152,6 +156,7 @@ def build_queue() -> RQClient:
 
 # -- triage primitives -------------------------------------------------------
 
+
 def _is_tiff_extension(name: str) -> bool:
     return name.lower().endswith(TIFF_SUFFIXES)
 
@@ -161,6 +166,7 @@ def _is_tiff_magic(head: bytes) -> bool:
 
 
 # -- database access ---------------------------------------------------------
+
 
 async def _create_pending_batch(engine: AsyncEngine, sftp_path: str) -> uuid.UUID:
     """Open one transactional session, insert a PENDING batch, return its id.
@@ -178,12 +184,13 @@ async def _create_pending_batch(engine: AsyncEngine, sftp_path: str) -> uuid.UUI
 
 # -- per-file processing -----------------------------------------------------
 
+
 def process_one(
     raw_name: str,
-    sftp:     SFTPClient,
-    blob:     MinioBlobClient,
-    queue:    RQClient,
-    engine:   AsyncEngine,
+    sftp: SFTPClient,
+    blob: MinioBlobClient,
+    queue: RQClient,
+    engine: AsyncEngine,
 ) -> None:
     """Triage one entry off the SFTP listing. Idempotent on safe filename."""
     # Defeat path traversal — only operate on the basename inside /upload.
@@ -228,23 +235,23 @@ def process_one(
         return
 
     # Happy path.
-    data      = sftp.read_file(upload_path)
+    data = sftp.read_file(upload_path)
     minio_uri = blob.upload_file(safe_name, data, content_type="image/tiff")
 
     # Persist PENDING batch row. process_one is sync; the DB layer is
     # async; one asyncio.run per file is cheap at this poll rate.
     batch_uuid = asyncio.run(_create_pending_batch(engine, sftp_path=upload_path))
-    batch_id   = str(batch_uuid)
+    batch_id = str(batch_uuid)
     log.info("ingest.batch_persisted", batch_id=batch_id, minio_uri=minio_uri)
 
     ticket: dict[str, str] = {
-        "batch_id":        batch_id,
+        "batch_id": batch_id,
         "minio_file_path": minio_uri,
     }
     job_id = queue.enqueue_job(
         queue_name=QUEUE_NAME,
         payload={
-            "func":   INFERENCE_FUNC_PATH,
+            "func": INFERENCE_FUNC_PATH,
             "kwargs": {"payload": json.dumps(ticket)},
         },
     )
@@ -260,6 +267,7 @@ def process_one(
 
 
 # -- main loop ---------------------------------------------------------------
+
 
 def _reconnect(sftp: SFTPClient) -> None:
     try:
@@ -280,9 +288,9 @@ def main() -> None:
     )
 
     sftp_creds, minio_creds = fetch_vault_secrets()
-    sftp   = build_sftp(sftp_creds)
-    blob   = build_blob(minio_creds)
-    queue  = build_queue()
+    sftp = build_sftp(sftp_creds)
+    blob = build_blob(minio_creds)
+    queue = build_queue()
     # NullPool: the worker dispatches each file's DB write via
     # asyncio.run, which spins a fresh event loop; asyncpg connections
     # are not safe to reuse across event loops, so we avoid pooling.

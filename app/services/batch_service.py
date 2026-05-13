@@ -14,9 +14,11 @@ class BatchService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-        self._repo    = BatchRepository(session)
+        self._repo = BatchRepository(session)
 
-    async def create_pending_batch(self, sftp_path: str, owner_id: uuid.UUID) -> uuid.UUID:
+    async def create_pending_batch(
+        self, sftp_path: str, owner_id: uuid.UUID
+    ) -> uuid.UUID:
         """Insert a PENDING batch and return its id.
 
         Returns just the id rather than a full BatchRead because the

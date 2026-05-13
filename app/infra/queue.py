@@ -31,9 +31,9 @@ class RQClient:
     """
 
     def __init__(self, redis_url: str) -> None:
-        self._redis_url:  str            = redis_url
-        self._connection                 = Redis.from_url(redis_url)
-        self._queues:    dict[str, Queue] = {}
+        self._redis_url: str = redis_url
+        self._connection = Redis.from_url(redis_url)
+        self._queues: dict[str, Queue] = {}
 
     def _get_queue(self, queue_name: str) -> Queue:
         queue = self._queues.get(queue_name)
@@ -69,7 +69,8 @@ class RQClient:
         except RedisConnectionError as exc:
             logger.exception(
                 "rq: redis connection failed on queue=%r func=%r",
-                queue_name, func_path,
+                queue_name,
+                func_path,
             )
             raise QueueUnavailableError(
                 f"could not enqueue {func_path!r} on {queue_name!r}: {exc}"
@@ -77,11 +78,17 @@ class RQClient:
 
         logger.info(
             "rq: enqueued job %s on queue=%r func=%r",
-            job_id, queue_name, func_path,
+            job_id,
+            queue_name,
+            func_path,
         )
         return job_id
 
     def __repr__(self) -> str:  # pragma: no cover
         # Strip any embedded credential before logging.
-        safe = self._redis_url.split("@")[-1] if "@" in self._redis_url else self._redis_url
+        safe = (
+            self._redis_url.split("@")[-1]
+            if "@" in self._redis_url
+            else self._redis_url
+        )
         return f"RQClient(redis={safe!r}, queues={list(self._queues)!r})"

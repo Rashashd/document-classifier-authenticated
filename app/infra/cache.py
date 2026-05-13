@@ -46,6 +46,4 @@ async def init_redis_cache(redis_url: str) -> None:
         ) from exc
 
     FastAPICache.init(RedisBackend(client), prefix=CACHE_KEY_PREFIX)
-    logger.info(
-        "cache: FastAPICache initialised (prefix=%r)", CACHE_KEY_PREFIX
-    )
+    logger.info("cache: FastAPICache initialised (prefix=%r)", CACHE_KEY_PREFIX)

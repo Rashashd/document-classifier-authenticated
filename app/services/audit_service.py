@@ -10,12 +10,11 @@ from app.domain.audit import AuditEntryCreate
 
 
 class AuditService:
-
     async def log_event(
         self,
-        actor_id:   uuid.UUID,
-        action:     str,
-        target:     str,
+        actor_id: uuid.UUID,
+        action: str,
+        target: str,
         request_id: str | None = None,
     ) -> None:
         """

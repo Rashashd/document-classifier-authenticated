@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Prediction
 from app.domain.prediction import PredictionCreate, PredictionUpdate
 
+
 class PredictionRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -28,16 +29,18 @@ class PredictionRepository:
         )
         return list(result.scalars().all())
 
-    async def update(self, prediction_id: UUID, data: PredictionUpdate) -> Prediction | None:
+    async def update(
+        self, prediction_id: UUID, data: PredictionUpdate
+    ) -> Prediction | None:
         """Used for 'Relabeling' by an analyst."""
         prediction = await self.get_by_id(prediction_id)
         if not prediction:
             return None
-        
+
         update_data = data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(prediction, key, value)
-            
+
         await self.session.commit()
         await self.session.refresh(prediction)
         return prediction
