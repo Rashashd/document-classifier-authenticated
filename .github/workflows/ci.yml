@@ -31,6 +31,20 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    # Job-level env: both the compose-up step (interpolates ${VAR})
+    # and the pytest step (test code reads os.environ.get) see the
+    # same values. If these only live on the compose step, pytest
+    # falls through to its defaults and auth-mismatches the running
+    # SFTP / MinIO containers.
+    env:
+      POSTGRES_USER:       postgres
+      POSTGRES_PASSWORD:   postgres
+      POSTGRES_DB:         app
+      MINIO_ROOT_USER:     admin
+      MINIO_ROOT_PASSWORD: password123
+      SFTP_USER:           scanner
+      SFTP_PASSWORD:       password123
+      VAULT_TOKEN:         ci-noop
     steps:
       - uses: actions/checkout@v4
 
@@ -50,10 +64,9 @@ jobs:
         # e2e ingestion test imports as a fixture helper.
         run: uv pip install --system pytest pytest-asyncio pillow
 
-      # CI has no .env. Write only the fields that Settings declares
-      # (extra="forbid" rejects anything not in the model). Compose-only
-      # vars (POSTGRES_*, MINIO_*, SFTP_*) go on the compose step's env:
-      # so they never touch Pydantic Settings.
+      # CI has no .env. Settings has extra="ignore" (app/core/config.py)
+      # so unrelated vars in the env are harmless; we still write the
+      # two app-side required fields for explicitness.
       - name: Create .env for CI
         run: |
           cat > .env << 'EOF'
@@ -67,15 +80,7 @@ jobs:
       # service is deliberately NOT started here — the Phase-2 worker
       # requires Vault, which CI does not provision yet.
       - name: Start infra services
-        env:
-          POSTGRES_USER:     postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB:       app
-          MINIO_ROOT_USER:   admin
-          MINIO_ROOT_PASSWORD: password123
-          SFTP_USER:         scanner
-          SFTP_PASSWORD:     password123
-          VAULT_TOKEN:       ci-noop
+        # All credentials inherited from the job-level env block above.
         run: docker compose up -d db redis minio sftp
 
       - name: Wait for services to be healthy
@@ -100,16 +105,17 @@ jobs:
       # Port 5433: compose maps 5433→5432 to avoid conflicts with a
       # local Postgres on dev machines; CI has no local Postgres but
       # we keep the same port so compose config is identical everywhere.
+      # DATABASE_URL is step-local because it points at host:port
+      # (localhost:5433), which isn't a value compose itself ever needs
+      # — only the host-side alembic + pytest invocations.
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
-          VAULT_TOKEN:  ci-noop
         run: alembic upgrade head
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
-          VAULT_TOKEN:  ci-noop
         run: pytest tests/
 
       - name: Tear down infra services
