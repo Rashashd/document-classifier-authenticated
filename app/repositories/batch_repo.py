@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # app/repositories/batch_repo.py
 from __future__ import annotations
 
@@ -9,6 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Batch
+from app.domain import batch
 from app.domain.batch import BatchStatus, BatchCreate, BatchUpdate
 
 
@@ -56,40 +56,22 @@ class BatchRepository:
         data = updates.model_dump(exclude_unset=True)
         if not data:
             return await self.get(batch_id)
+        
+        updatable_columns = {"sftp_path", "status", "owner_id"}  # add any other actual columns
+        filtered_data = {k: v for k, v in data.items() if k in updatable_columns}
+        
+        if not filtered_data:
+            # Nothing to update (e.g., only document_count provided)
+            return await self.get(batch_id)
+
         stmt = update(Batch).where(Batch.id == batch_id).values(**data).returning(Batch)
         result = await self.session.execute(stmt)
         await self.session.flush()
         return result.scalar_one_or_none()
-=======
-"""Repository for the batches table. SQL only — no business logic, no HTTP."""
-
-from __future__ import annotations
-
-from sqlalchemy.orm import Session
-
-from app.db.models import Batch
-from app.domain.batch import BatchStatus
-
-
-class BatchRepository:
-    """SQL access for batches. Caller owns the session and the transaction."""
-
-    def __init__(self, session: Session) -> None:
-        self._session = session
-
-    def create_batch(self, filename: str, minio_path: str) -> Batch:
-        """Insert a PENDING batch row and return the ORM model.
-
-        Uses ``flush`` (not ``commit``) so the row's auto-generated
-        ``id`` / ``created_at`` are populated within the caller's
-        transaction. The service owns the commit.
-        """
-        batch = Batch(
-            filename=filename,
-            original_minio_path=minio_path,
-            status=BatchStatus.pending,
-        )
-        self._session.add(batch)
-        self._session.flush()
+    
+    # used by mahdi for worker:
+    async def create_batch(self, sftp_path: str, owner_id: uuid.UUID) -> Batch:
+        batch = Batch(sftp_path=sftp_path, owner_id=owner_id, status=BatchStatus.pending)
+        self.session.add(batch)
+        await self.session.flush()
         return batch
->>>>>>> origin/master

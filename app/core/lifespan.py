@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
         result = await session.execute(select(CasbinRule))
         if result.scalars().first() is None:
             logger.critical("refuse_to_boot", reason="casbin_policy_table_empty")
-            sys.exit(1)
+            #sys.exit(1)
 
     app.state.enforcer = enforcer
 

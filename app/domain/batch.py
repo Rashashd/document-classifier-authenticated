@@ -35,4 +35,4 @@ class BatchRead(BatchBase):
 
 class BatchUpdate(BaseModel):
     status:         BatchStatus | None = None
-    document_count: int | None        = None
+    #document_count: int | None        = None
