@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Prediction
@@ -38,8 +38,8 @@ class PredictionRepository:
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
-    async def list_recent(self, limit: int = 100) -> Sequence[Prediction]:
-        stmt = select(Prediction).order_by(Prediction.created_at.desc()).limit(limit)
+    async def list_recent(self, skip: int = 0, limit: int = 100) -> Sequence[Prediction]:
+        stmt = select(Prediction).order_by(Prediction.created_at.desc()).offset(skip).limit(limit)
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
@@ -51,3 +51,8 @@ class PredictionRepository:
         result = await self.session.execute(stmt)
         await self.session.flush()
         return result.scalar_one_or_none()
+
+    async def count_all(self) -> int:
+        stmt = select(func.count()).select_from(Prediction)
+        result = await self.session.execute(stmt)
+        return result.scalar_one()

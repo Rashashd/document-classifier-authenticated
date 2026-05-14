@@ -39,9 +39,10 @@ class PredictionService:
         prediction = await self.repo.get(prediction_id)
         return PredictionRead.model_validate(prediction) if prediction else None
 
-    async def list_recent_predictions(self, limit: int = 100) -> Sequence[PredictionRead]:
-        predictions = await self.repo.list_recent(limit)
-        return [PredictionRead.model_validate(p) for p in predictions]
+    async def list_recent_predictions(self, skip: int = 0, limit: int = 100) -> tuple[Sequence[PredictionRead], int]:
+        predictions = await self.repo.list_recent(skip, limit)
+        total = await self.repo.count_all()
+        return [PredictionRead.model_validate(p) for p in predictions], total
 
     async def relabel_prediction(
         self,

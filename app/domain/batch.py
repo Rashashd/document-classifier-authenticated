@@ -36,3 +36,10 @@ class BatchRead(BatchBase):
 class BatchUpdate(BaseModel):
     status:         BatchStatus | None = None
     #document_count: int | None        = None
+
+# aded for pagination
+class BatchListResponse(BaseModel):
+    items: list[BatchRead]
+    total: int
+    skip: int
+    limit: int

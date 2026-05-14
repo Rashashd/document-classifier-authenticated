@@ -45,9 +45,9 @@ class BatchService:
             return None
         return BatchRead.model_validate(batch)
 
-    async def list_batches(self, owner_id: uuid.UUID, skip: int = 0, limit: int = 100) -> Sequence[BatchRead]:
-        batches = await self._repo.list_by_owner(owner_id, skip, limit)
-        return [BatchRead.model_validate(b) for b in batches]
+    async def list_batches(self, skip: int = 0, limit: int = 100) -> tuple[Sequence[BatchRead], int]:
+        batches, total = await self._repo.list_all(skip, limit)   # repo method to get all batches
+        return [BatchRead.model_validate(b) for b in batches], total
 
     async def update_batch_status(
         self,
@@ -86,10 +86,6 @@ class BatchService:
         old_status = old_batch.status
         batch = await self._repo.update(batch_id, updates)
         if batch:
-            await self._session.commit()
-            if self._cache:
-                await self._cache.invalidate_batch(batch_id)
-                await self._cache.invalidate_user(batch.owner_id)
             if self._audit and actor_id and updates.status is not None and updates.status != old_status:
                 await self._audit.log_event(
                     actor_id=actor_id,
@@ -97,4 +93,9 @@ class BatchService:
                     target=f"/batches/{batch_id}",
                     request_id=request_id,
                 )
+            await self._session.commit()
+            if self._cache:
+                await self._cache.invalidate_batch(batch_id)
+                await self._cache.invalidate_user(batch.owner_id)
+            
         return BatchRead.model_validate(batch) if batch else None

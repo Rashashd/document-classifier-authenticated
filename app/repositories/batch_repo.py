@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Batch
@@ -75,3 +75,18 @@ class BatchRepository:
         self.session.add(batch)
         await self.session.flush()
         return batch
+
+    # added for pagination
+    async def count_by_owner(self, owner_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(Batch).where(Batch.owner_id == owner_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
+
+    # shows all batches including null - so scanner batches created internally without an owner_id
+    async def list_all(self, skip: int = 0, limit: int = 100) -> tuple[Sequence[Batch], int]:
+        stmt = select(Batch).order_by(Batch.created_at.desc()).offset(skip).limit(limit)
+        result = await self.session.execute(stmt)
+        items = result.scalars().all()
+        count_stmt = select(func.count()).select_from(Batch)
+        total = await self.session.scalar(count_stmt)
+        return items, total or 0

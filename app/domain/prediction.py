@@ -53,3 +53,9 @@ class PredictionUpdate(BaseModel):
     """Used for analyst relabelling."""
     label:        DocumentLabel | None = None
     overlay_path: str | None          = None
+
+class PredictionListResponse(BaseModel):
+    items: list[PredictionRead]
+    total: int
+    skip: int
+    limit: int
