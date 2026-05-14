@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,6 +47,10 @@ class Settings(BaseSettings):
     # App
     app_title: str = "Document Classifier"
     app_version: str = "0.1.0"
+    # Deployment environment. Gates dev-only routes (e.g. /test/*) and
+    # any future env-specific behaviour. Set APP_ENV=production in the
+    # production deployment; everywhere else may default.
+    app_env: Literal["development", "test", "staging", "production"] = "development"
 
 
 @lru_cache(maxsize=1)

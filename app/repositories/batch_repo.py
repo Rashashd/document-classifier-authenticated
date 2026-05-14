@@ -51,6 +51,17 @@ class BatchRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
+    async def list_all(self, skip: int = 0, limit: int = 100) -> Sequence[Batch]:
+        """Return every batch, owner-agnostic. Used by reviewer/auditor views.
+
+        Scanner-ingested batches have ``owner_id=NULL`` which would never
+        match a ``WHERE owner_id = ?`` filter, so a separate method is
+        required for the "show all batches" use case the brief describes.
+        """
+        stmt = select(Batch).offset(skip).limit(limit).order_by(Batch.created_at.desc())
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
     async def update_status(self, batch_id: uuid.UUID, status: BatchStatus) -> Batch | None:
         """Update only the status. Returns the updated object or None if not found."""
         stmt = update(Batch).where(Batch.id == batch_id).values(status=status).returning(Batch)

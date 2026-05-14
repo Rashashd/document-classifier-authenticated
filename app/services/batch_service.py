@@ -49,8 +49,10 @@ class BatchService:
             return None
         return BatchRead.model_validate(batch)
 
-    async def list_batches(self, owner_id: uuid.UUID, skip: int = 0, limit: int = 100) -> Sequence[BatchRead]:
-        batches = await self._repo.list_by_owner(owner_id, skip, limit)
+    async def list_batches(self, skip: int = 0, limit: int = 100) -> Sequence[BatchRead]:
+        """Return every batch (owner-agnostic). Scanner-ingested batches have
+        owner_id=NULL — filtering by owner would hide them from reviewers."""
+        batches = await self._repo.list_all(skip, limit)
         return [BatchRead.model_validate(b) for b in batches]
 
     async def update_batch_status(

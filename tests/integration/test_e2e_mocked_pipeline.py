@@ -29,7 +29,6 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 from redis import Redis as SyncRedis
-from redis.asyncio import Redis as AsyncRedis
 from rq.job import Job
 from sqlalchemy import NullPool, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine

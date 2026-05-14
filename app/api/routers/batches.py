@@ -36,7 +36,9 @@ async def list_batches(
     current_user: User = Depends(get_current_user),
     service: BatchService = Depends(get_batch_service),
 ) -> Sequence[BatchRead]:
-    return await service.list_batches(owner_id=current_user.id, skip=skip, limit=limit)
+    # Owner-agnostic per the brief: reviewer / auditor / admin all view all
+    # batches. Authentication is still enforced via get_current_user.
+    return await service.list_batches(skip=skip, limit=limit)
 
 
 @router.get("/{batch_id}", response_model=BatchRead)
@@ -48,8 +50,6 @@ async def get_batch(
     batch = await service.get_batch(batch_id, user_id=current_user.id)
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
-    if batch.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return batch
 
 

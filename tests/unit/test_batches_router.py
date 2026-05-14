@@ -45,10 +45,10 @@ def _make_app(current_user, enforcer, service_mock) -> FastAPI:
 
 @pytest.mark.anyio
 async def test_list_batches_returns_paginated_results():
-    """GET /batches → 200, calls service.list_batches with the user's id."""
+    """GET /batches → 200, owner-agnostic; service called with pagination only."""
     user = _make_user("reviewer")
-    batch_a = _make_batch_read(owner_id=user.id)
-    batch_b = _make_batch_read(owner_id=user.id)
+    batch_a = _make_batch_read(owner_id=uuid.uuid4())      # someone else's batch
+    batch_b = _make_batch_read(owner_id=None)              # scanner-ingested
 
     service = MagicMock()
     service.list_batches = AsyncMock(return_value=[batch_a, batch_b])
@@ -60,15 +60,14 @@ async def test_list_batches_returns_paginated_results():
 
     assert resp.status_code == 200
     assert len(resp.json()) == 2
-    service.list_batches.assert_awaited_once_with(owner_id=user.id, skip=10, limit=20)
+    service.list_batches.assert_awaited_once_with(skip=10, limit=20)
 
 
 @pytest.mark.anyio
-async def test_get_batch_returns_403_when_not_owner_and_not_admin():
-    """A reviewer querying someone else's batch by id gets 403."""
+async def test_get_batch_returns_200_for_any_authenticated_role():
+    """A reviewer can read any batch by id (incl. scanner-ingested NULL-owner)."""
     user = _make_user("reviewer")
-    someone_else = uuid.uuid4()
-    other_batch = _make_batch_read(owner_id=someone_else)
+    other_batch = _make_batch_read(owner_id=None)   # scanner batch
 
     service = MagicMock()
     service.get_batch = AsyncMock(return_value=other_batch)
@@ -78,7 +77,8 @@ async def test_get_batch_returns_403_when_not_owner_and_not_admin():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get(f"/batches/{other_batch.id}")
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
+    assert resp.json()["id"] == str(other_batch.id)
 
 
 @pytest.mark.anyio

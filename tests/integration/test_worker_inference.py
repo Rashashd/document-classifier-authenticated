@@ -26,7 +26,6 @@ from typing import Iterator
 
 import pytest
 from PIL import Image
-from redis.asyncio import Redis as AsyncRedis
 from sqlalchemy import NullPool, select, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 

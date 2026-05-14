@@ -22,10 +22,14 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(audit_router)
-    app.include_router(batches_router)        
-    app.include_router(predictions_router) 
-    app.include_router(test_router) # include test endpoints for development only
-   
+    app.include_router(batches_router)
+    app.include_router(predictions_router)
+
+    # Dev-only seed endpoints. Mounted everywhere EXCEPT production —
+    # set APP_ENV=production in the prod deployment to suppress.
+    if settings.app_env != "production":
+        app.include_router(test_router)
+
     return app
 
 
