@@ -37,6 +37,14 @@ class BatchRead(BatchBase):
 
 
 class BatchUpdate(BaseModel):
-    # ``document_count`` is a computed @property on the ORM model (len(predictions))
-    # and therefore not directly updatable; it's intentionally absent here.
+    # ``document_count`` is a computed @property on the ORM model
+    # (len(predictions)) and therefore intentionally not updatable.
     status: BatchStatus | None = None
+
+
+class BatchListResponse(BaseModel):
+    """Paginated GET /batches envelope."""
+    items: list[BatchRead]
+    total: int
+    skip: int
+    limit: int

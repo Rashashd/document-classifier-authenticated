@@ -45,13 +45,14 @@ def _make_app(current_user, enforcer, service_mock) -> FastAPI:
 
 @pytest.mark.anyio
 async def test_list_batches_returns_paginated_results():
-    """GET /batches → 200, owner-agnostic; service called with pagination only."""
+    """GET /batches → 200 with BatchListResponse envelope; service called with pagination."""
     user = _make_user("reviewer")
     batch_a = _make_batch_read(owner_id=uuid.uuid4())      # someone else's batch
     batch_b = _make_batch_read(owner_id=None)              # scanner-ingested
 
     service = MagicMock()
-    service.list_batches = AsyncMock(return_value=[batch_a, batch_b])
+    # Sara's service returns (items, total) tuple for pagination.
+    service.list_batches = AsyncMock(return_value=([batch_a, batch_b], 2))
 
     app = _make_app(user, _make_enforcer(True), service)
 
@@ -59,7 +60,11 @@ async def test_list_batches_returns_paginated_results():
         resp = await client.get("/batches?skip=10&limit=20")
 
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
+    body = resp.json()
+    assert body["total"] == 2
+    assert body["skip"]  == 10
+    assert body["limit"] == 20
+    assert len(body["items"]) == 2
     service.list_batches.assert_awaited_once_with(skip=10, limit=20)
 
 

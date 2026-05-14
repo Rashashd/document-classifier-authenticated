@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Batch
@@ -51,16 +51,29 @@ class BatchRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
-    async def list_all(self, skip: int = 0, limit: int = 100) -> Sequence[Batch]:
-        """Return every batch, owner-agnostic. Used by reviewer/auditor views.
+    async def list_all(
+        self, skip: int = 0, limit: int = 100
+    ) -> tuple[Sequence[Batch], int]:
+        """Return every batch + a total count for pagination.
 
-        Scanner-ingested batches have ``owner_id=NULL`` which would never
-        match a ``WHERE owner_id = ?`` filter, so a separate method is
-        required for the "show all batches" use case the brief describes.
+        Owner-agnostic — scanner-ingested batches (owner_id=NULL) would
+        never match a ``WHERE owner_id = ?`` filter.
         """
-        stmt = select(Batch).offset(skip).limit(limit).order_by(Batch.created_at.desc())
+        stmt = (
+            select(Batch)
+            .order_by(Batch.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
         result = await self._session.execute(stmt)
-        return result.scalars().all()
+        items = result.scalars().all()
+        total = await self._session.scalar(select(func.count()).select_from(Batch))
+        return items, total or 0
+
+    async def count_by_owner(self, owner_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(Batch).where(Batch.owner_id == owner_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
 
     async def update_status(self, batch_id: uuid.UUID, status: BatchStatus) -> Batch | None:
         """Update only the status. Returns the updated object or None if not found."""

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, require_role
 from app.db.session import get_async_session
 from app.db.models import User   # <-- changed
-from app.domain.batch import BatchRead, BatchUpdate
+from app.domain.batch import BatchRead, BatchUpdate, BatchListResponse
 from app.services.batch_service import BatchService
 from app.services.cache_service import CacheService
+from fastapi_cache.decorator import cache
 from app.services.audit_service import AuditService
+
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
@@ -29,20 +30,25 @@ def get_batch_service(
     return BatchService(session, cache, audit)
 
 
-@router.get("", response_model=list[BatchRead])
+@router.get("", response_model=BatchListResponse)
+@cache(expire=60)  # cache for 60 seconds
 async def list_batches(
+    request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),  # still authenticated, but not used
     service: BatchService = Depends(get_batch_service),
-) -> Sequence[BatchRead]:
+) -> BatchListResponse:
     # Owner-agnostic per the brief: reviewer / auditor / admin all view all
     # batches. Authentication is still enforced via get_current_user.
-    return await service.list_batches(skip=skip, limit=limit)
+    items, total = await service.list_batches(skip=skip, limit=limit)
+    return BatchListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
 @router.get("/{batch_id}", response_model=BatchRead)
+@cache(expire=60)  # cache for 60 seconds
 async def get_batch(
+    request: Request,
     batch_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: BatchService = Depends(get_batch_service),

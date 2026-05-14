@@ -47,21 +47,25 @@ def _make_app(current_user, enforcer, service_mock) -> FastAPI:
 
 @pytest.mark.anyio
 async def test_list_recent_predictions_returns_list():
-    """GET /predictions/recent → 200, service called with the limit param."""
+    """GET /predictions/recent → 200 with PredictionListResponse envelope."""
     user = _make_user("reviewer")
     preds = [_make_prediction_read(confidence=0.92), _make_prediction_read(confidence=0.55)]
 
     service = MagicMock()
-    service.list_recent_predictions = AsyncMock(return_value=preds)
+    # Sara's service returns (items, total) tuple for pagination.
+    service.list_recent_predictions = AsyncMock(return_value=(preds, 2))
 
     app = _make_app(user, _make_enforcer(True), service)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/predictions/recent?limit=25")
+        resp = await client.get("/predictions/recent?skip=0&limit=25")
 
     assert resp.status_code == 200
-    assert len(resp.json()) == 2
-    service.list_recent_predictions.assert_awaited_once_with(limit=25)
+    body = resp.json()
+    assert body["total"] == 2
+    assert body["limit"] == 25
+    assert len(body["items"]) == 2
+    service.list_recent_predictions.assert_awaited_once_with(skip=0, limit=25)
 
 
 @pytest.mark.anyio

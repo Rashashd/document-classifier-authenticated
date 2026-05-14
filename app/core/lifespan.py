@@ -21,6 +21,8 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
 
+    # Must initialize FastAPI-Cache here + redis client 
+
     # 1. Database engine
     engine = create_async_engine(settings.database_url, echo=False)
     app.state.engine = engine
