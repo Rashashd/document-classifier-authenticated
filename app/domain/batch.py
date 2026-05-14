@@ -37,5 +37,6 @@ class BatchRead(BatchBase):
 
 
 class BatchUpdate(BaseModel):
+    # ``document_count`` is a computed @property on the ORM model (len(predictions))
+    # and therefore not directly updatable; it's intentionally absent here.
     status: BatchStatus | None = None
-    document_count: int | None = None

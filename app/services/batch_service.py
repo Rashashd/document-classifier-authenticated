@@ -3,29 +3,102 @@
 from __future__ import annotations
 
 import uuid
+from typing import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.batch_repo import BatchRepository
+from app.domain.batch import BatchRead, BatchStatus, BatchUpdate
+from app.services.cache_service import CacheService
+from app.services.audit_service import AuditService
 
 
 class BatchService:
     """Orchestrates Batch creation and state transitions."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        cache_service: CacheService | None = None,
+        audit_service: AuditService | None = None,
+    ) -> None:
         self._session = session
         self._repo = BatchRepository(session)
+        self._cache = cache_service
+        self._audit = audit_service
 
     async def create_pending_batch(
         self, sftp_path: str, owner_id: uuid.UUID | None
     ) -> uuid.UUID:
         """Insert a PENDING batch and return its id.
 
-        Returns just the id rather than a full BatchRead because the
-        ingestion worker (the only current caller) only needs the id
-        to attach to its enqueued inference job. Read endpoints in
-        the API layer build BatchRead from the ORM row directly.
+        ``owner_id=None`` is valid for scanner-originated batches (no JWT
+        subject). Cache invalidation is skipped in that case — nothing
+        is keyed on a missing owner.
         """
         batch = await self._repo.create_batch(sftp_path=sftp_path, owner_id=owner_id)
         await self._session.commit()
+        if self._cache and owner_id is not None:
+            await self._cache.invalidate_user(owner_id)
         return batch.id
+
+    # New methods for Person B
+    async def get_batch(self, batch_id: uuid.UUID, user_id: uuid.UUID | None = None) -> BatchRead | None:
+        batch = await self._repo.get_with_predictions(batch_id)
+        if not batch:
+            return None
+        return BatchRead.model_validate(batch)
+
+    async def list_batches(self, owner_id: uuid.UUID, skip: int = 0, limit: int = 100) -> Sequence[BatchRead]:
+        batches = await self._repo.list_by_owner(owner_id, skip, limit)
+        return [BatchRead.model_validate(b) for b in batches]
+
+    async def update_batch_status(
+        self,
+        batch_id: uuid.UUID,
+        status: BatchStatus,
+        actor_id: uuid.UUID | None = None,
+        request_id: str | None = None,
+    ) -> BatchRead | None:
+        """Update only the status. Optionally log audit if actor provided."""
+        batch = await self._repo.update_status(batch_id, status)
+        if batch:
+            await self._session.commit()
+            if self._cache:
+                await self._cache.invalidate_batch(batch_id)
+                await self._cache.invalidate_user(batch.owner_id)
+            if self._audit and actor_id:
+                await self._audit.log_event(
+                    actor_id=actor_id,
+                    action=f"batch_status_change_{status.value}",
+                    target=f"/batches/{batch_id}",
+                    request_id=request_id,
+                )
+        return BatchRead.model_validate(batch) if batch else None
+
+    async def update_batch(
+        self,
+        batch_id: uuid.UUID,
+        updates: BatchUpdate,
+        actor_id: uuid.UUID | None = None,
+        request_id: str | None = None,
+    ) -> BatchRead | None:
+        """Generic batch update. If status changes and actor provided, log audit."""
+        old_batch = await self._repo.get(batch_id)
+        if not old_batch:
+            return None
+        old_status = old_batch.status
+        batch = await self._repo.update(batch_id, updates)
+        if batch:
+            await self._session.commit()
+            if self._cache:
+                await self._cache.invalidate_batch(batch_id)
+                await self._cache.invalidate_user(batch.owner_id)
+            if self._audit and actor_id and updates.status is not None and updates.status != old_status:
+                await self._audit.log_event(
+                    actor_id=actor_id,
+                    action=f"batch_status_change_{updates.status.value}",
+                    target=f"/batches/{batch_id}",
+                    request_id=request_id,
+                )
+        return BatchRead.model_validate(batch) if batch else None

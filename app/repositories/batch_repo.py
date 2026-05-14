@@ -63,6 +63,14 @@ class BatchRepository:
         data = updates.model_dump(exclude_unset=True)
         if not data:
             return await self.get(batch_id)
+        
+        updatable_columns = {"sftp_path", "status", "owner_id"}  # add any other actual columns
+        filtered_data = {k: v for k, v in data.items() if k in updatable_columns}
+        
+        if not filtered_data:
+            # Nothing to update (e.g., only document_count provided)
+            return await self.get(batch_id)
+
         stmt = update(Batch).where(Batch.id == batch_id).values(**data).returning(Batch)
         result = await self._session.execute(stmt)
         await self._session.flush()

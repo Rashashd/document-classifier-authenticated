@@ -111,9 +111,8 @@ def redis_sync() -> Iterator[SyncRedis]:
     client.close()
 
 
-@pytest.fixture
-def cache_redis() -> AsyncRedis:
-    return AsyncRedis.from_url(REDIS_URL, decode_responses=False)
+# cache_redis fixture removed — the worker now initialises CacheService
+# internally from REDIS_URL.
 
 
 @pytest.fixture
@@ -180,7 +179,6 @@ def test_full_ingestion_to_inference_pipeline(
     blob_client:  MinioBlobClient,
     queue_client: RQClient,
     redis_sync:   SyncRedis,
-    cache_redis:  AsyncRedis,
     db_engine:    AsyncEngine,
 ) -> None:
     """Trace one TIFF from SFTP through both workers to the prediction row."""
@@ -216,7 +214,7 @@ def test_full_ingestion_to_inference_pipeline(
             payload,
             blob=blob_client,
             engine=db_engine,
-            cache_redis=cache_redis,
+            redis_url=REDIS_URL,
         )
 
     # ---- Phase 6: Final assertions ----------------------------------

@@ -76,11 +76,9 @@ def db_engine() -> Iterator[AsyncEngine]:
     asyncio.run(engine.dispose())
 
 
-@pytest.fixture
-def cache_redis() -> AsyncRedis:
-    # No explicit close — redis-py 4.x's async close API drifted between
-    # patch versions and the pool gets GC'd at end-of-test anyway.
-    return AsyncRedis.from_url(REDIS_URL, decode_responses=False)
+# cache_redis fixture removed — the worker now initialises FastAPICache /
+# CacheService internally via init_redis_cache(redis_url). The test passes
+# the REDIS_URL through the redis_url kwarg.
 
 
 def _build_tiff() -> bytes:
@@ -135,7 +133,6 @@ def _mock_classify(image_bytes: bytes) -> tuple[str, float, bytes]:
 def test_run_inference_end_to_end(
     blob_client: MinioBlobClient,
     db_engine:   AsyncEngine,
-    cache_redis: AsyncRedis,
 ) -> None:
     """Upload TIFF → seed batch → run worker (mock ML) → assert state."""
     asyncio.run(_truncate_test_rows(db_engine))
@@ -159,7 +156,7 @@ def test_run_inference_end_to_end(
         payload=job.model_dump_json(),
         blob=blob_client,
         engine=db_engine,
-        cache_redis=cache_redis,
+        redis_url=REDIS_URL,
         classify=_mock_classify,
     )
 

@@ -22,7 +22,6 @@ from typing import Callable
 import structlog
 from PIL import Image, ImageDraw, ImageFont
 from redis import Redis
-from redis.asyncio import Redis as AsyncRedis
 from rq import Worker
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -31,7 +30,10 @@ from app.classifier.inference import Prediction, get_default_classifier
 from app.domain.jobs import InferenceJob
 from app.domain.prediction import DocumentLabel, PredictionCreate
 from app.infra.blob import MinioBlobClient
+from app.infra.cache import init_redis_cache
 from app.infra.vault import VaultClient
+from app.services.audit_service import AuditService
+from app.services.cache_service import CacheService
 from app.services.prediction_service import PredictionService
 
 
@@ -134,14 +136,38 @@ def run_classification(image_bytes: bytes) -> tuple[str, float, bytes]:
 
 async def _persist(
     engine: AsyncEngine,
-    cache_redis: AsyncRedis | None,
+    redis_url: str,
     prediction_in: PredictionCreate,
 ) -> None:
-    """Open one session, save the prediction, flip the batch to done."""
-    async with AsyncSession(engine, expire_on_commit=False) as session:
-        await PredictionService(
-            session, cache_redis=cache_redis
-        ).save_prediction_and_complete_batch(prediction_in)
+    """Open one session, save the prediction, flip the batch to done.
+
+    ``init_redis_cache`` is called inside this asyncio.run so the
+    FastAPICache backend's AsyncRedis client is bound to the same loop
+    that ``CacheService.invalidate_*`` will use. The client is closed
+    in ``finally`` to avoid a dangling reference being GC'd against a
+    closed loop in subsequent test fixtures.
+    """
+    from fastapi_cache import FastAPICache
+    from fastapi_cache.backends.redis import RedisBackend
+
+    # FastAPICache.init() short-circuits when already initialised, so a
+    # stale (closed-loop) AsyncRedis from a prior asyncio.run would
+    # leak into this run. Reset clears _init and _backend.
+    FastAPICache.reset()
+    await init_redis_cache(redis_url)
+    cache_service = CacheService()
+    try:
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            audit_service = AuditService(session)
+            await PredictionService(
+                session,
+                cache_service=cache_service,
+                audit_service=audit_service,
+            ).save_prediction_and_complete_batch(prediction_in)
+    finally:
+        backend = FastAPICache.get_backend()
+        if isinstance(backend, RedisBackend):
+            await backend.redis.close()
 
 
 # -- the RQ target function -------------------------------------------------
@@ -152,7 +178,7 @@ def run_inference(
     *,
     blob: MinioBlobClient | None = None,
     engine: AsyncEngine | None = None,
-    cache_redis: AsyncRedis | None = None,
+    redis_url: str | None = None,
     classify: ClassifyFn | None = None,
 ) -> dict:
     """RQ-callable inference entrypoint.
@@ -195,7 +221,10 @@ def run_inference(
             confidence=confidence,
             overlay_path=overlay_uri,
         )
-        asyncio.run(_persist(db_engine, cache_redis, prediction_in))
+        resolved_redis_url = redis_url or os.environ.get(
+            "REDIS_URL", "redis://redis:6379/0"
+        )
+        asyncio.run(_persist(db_engine, resolved_redis_url, prediction_in))
 
         log.info(
             "inference.success",
