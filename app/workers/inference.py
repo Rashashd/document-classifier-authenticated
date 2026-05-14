@@ -26,7 +26,12 @@ from rq import Worker
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
-from app.classifier.inference import Prediction, get_default_classifier
+from app.classifier.inference import (
+    ClassifierArtifactError,
+    Prediction,
+    assert_classifier_artifacts,
+    get_default_classifier,
+)
 from app.domain.jobs import InferenceJob
 from app.domain.prediction import DocumentLabel, PredictionCreate
 from app.infra.blob import MinioBlobClient
@@ -278,6 +283,15 @@ def main() -> None:
     """Start an RQ worker that consumes inference jobs."""
     configure_logging()
     log.info("inference_worker.boot", queue=QUEUE_NAME)
+
+    # Refuse-to-start: classifier weights + card must be present and
+    # SHA-256-match the model_card.json. A late discovery (first job)
+    # would already be in-flight by the time the worker realises.
+    try:
+        assert_classifier_artifacts()
+    except ClassifierArtifactError as exc:
+        log.critical("refuse_to_boot", reason="classifier_artifacts", error=str(exc))
+        sys.exit(1)
 
     # Bootstrap Vault and prove we can reach all backing services before
     # joining the queue — refuse-to-start semantics.

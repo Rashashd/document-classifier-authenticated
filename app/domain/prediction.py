@@ -13,7 +13,7 @@ class DocumentLabel(str, Enum):
     letter = "letter"
     memo = "memo"
     email = "email"
-    filefolder = "filefolder"
+    file_folder = "file_folder"
     form = "form"
     handwritten = "handwritten"
     invoice = "invoice"

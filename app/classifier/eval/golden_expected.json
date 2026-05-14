@@ -1,0 +1,1502 @@
+[
+  {
+    "filename": "01__true-letter__imagesc__c__n__a__cna63f00__0001215021.tif",
+    "source_relative_path": "imagesc/c/n/a/cna63f00/0001215021.tif",
+    "true_label_id": 0,
+    "true_label": "letter",
+    "expected_label_id": 11,
+    "expected_label": "invoice",
+    "top1_confidence": 0.17257334291934967,
+    "top5_label_ids": [
+      11,
+      0,
+      15,
+      7,
+      10
+    ],
+    "top5_labels": [
+      "invoice",
+      "letter",
+      "memo",
+      "specification",
+      "budget"
+    ],
+    "top5_confidences": [
+      0.17257334291934967,
+      0.14198607206344604,
+      0.1383214294910431,
+      0.11010850220918655,
+      0.09888359159231186
+    ]
+  },
+  {
+    "filename": "02__true-letter__imagesa__a__q__c__aqc24d00__507649930.tif",
+    "source_relative_path": "imagesa/a/q/c/aqc24d00/507649930.tif",
+    "true_label_id": 0,
+    "true_label": "letter",
+    "expected_label_id": 15,
+    "expected_label": "memo",
+    "top1_confidence": 0.4771955907344818,
+    "top5_label_ids": [
+      15,
+      0,
+      5,
+      7,
+      13
+    ],
+    "top5_labels": [
+      "memo",
+      "letter",
+      "scientific_report",
+      "specification",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.4771955907344818,
+      0.16481180489063263,
+      0.1378333419561386,
+      0.09739512205123901,
+      0.04574361816048622
+    ]
+  },
+  {
+    "filename": "03__true-letter__imagesg__g__q__j__gqj59c00__70057815-7815.tif",
+    "source_relative_path": "imagesg/g/q/j/gqj59c00/70057815-7815.tif",
+    "true_label_id": 0,
+    "true_label": "letter",
+    "expected_label_id": 0,
+    "expected_label": "letter",
+    "top1_confidence": 0.7174887657165527,
+    "top5_label_ids": [
+      0,
+      15,
+      2,
+      14,
+      5
+    ],
+    "top5_labels": [
+      "letter",
+      "memo",
+      "email",
+      "resume",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.7174887657165527,
+      0.21954263746738434,
+      0.018436165526509285,
+      0.01328720897436142,
+      0.006217782385647297
+    ]
+  },
+  {
+    "filename": "04__true-letter__imagesd__d__x__h__dxh35d00__505033380.tif",
+    "source_relative_path": "imagesd/d/x/h/dxh35d00/505033380.tif",
+    "true_label_id": 0,
+    "true_label": "letter",
+    "expected_label_id": 3,
+    "expected_label": "handwritten",
+    "top1_confidence": 0.9997742772102356,
+    "top5_label_ids": [
+      3,
+      1,
+      15,
+      0,
+      8
+    ],
+    "top5_labels": [
+      "handwritten",
+      "form",
+      "memo",
+      "letter",
+      "file_folder"
+    ],
+    "top5_confidences": [
+      0.9997742772102356,
+      4.9359579861629754e-05,
+      4.079739301232621e-05,
+      2.7272313673165627e-05,
+      2.3603863155585714e-05
+    ]
+  },
+  {
+    "filename": "05__true-form__imagese__e__m__t__emt27e00__2028848258.tif",
+    "source_relative_path": "imagese/e/m/t/emt27e00/2028848258.tif",
+    "true_label_id": 1,
+    "true_label": "form",
+    "expected_label_id": 7,
+    "expected_label": "specification",
+    "top1_confidence": 0.1834985315799713,
+    "top5_label_ids": [
+      7,
+      5,
+      0,
+      15,
+      13
+    ],
+    "top5_labels": [
+      "specification",
+      "scientific_report",
+      "letter",
+      "memo",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.1834985315799713,
+      0.17391037940979004,
+      0.1635379195213318,
+      0.1460563689470291,
+      0.13749580085277557
+    ]
+  },
+  {
+    "filename": "06__true-form__imagese__e__f__p__efp25e00__2026365190.tif",
+    "source_relative_path": "imagese/e/f/p/efp25e00/2026365190.tif",
+    "true_label_id": 1,
+    "true_label": "form",
+    "expected_label_id": 1,
+    "expected_label": "form",
+    "top1_confidence": 0.4398072063922882,
+    "top5_label_ids": [
+      1,
+      13,
+      11,
+      7,
+      5
+    ],
+    "top5_labels": [
+      "form",
+      "questionnaire",
+      "invoice",
+      "specification",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.4398072063922882,
+      0.22728696465492249,
+      0.21714182198047638,
+      0.04205404594540596,
+      0.03116043470799923
+    ]
+  },
+  {
+    "filename": "07__true-form__imagesc__c__c__n__ccn57d00__2046538102.tif",
+    "source_relative_path": "imagesc/c/c/n/ccn57d00/2046538102.tif",
+    "true_label_id": 1,
+    "true_label": "form",
+    "expected_label_id": 1,
+    "expected_label": "form",
+    "top1_confidence": 0.6389287114143372,
+    "top5_label_ids": [
+      1,
+      15,
+      11,
+      13,
+      5
+    ],
+    "top5_labels": [
+      "form",
+      "memo",
+      "invoice",
+      "questionnaire",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.6389287114143372,
+      0.16102293133735657,
+      0.0637698695063591,
+      0.045768726617097855,
+      0.029489386826753616
+    ]
+  },
+  {
+    "filename": "08__true-form__imagese__e__d__g__edg52c00__2074240728.tif",
+    "source_relative_path": "imagese/e/d/g/edg52c00/2074240728.tif",
+    "true_label_id": 1,
+    "true_label": "form",
+    "expected_label_id": 1,
+    "expected_label": "form",
+    "top1_confidence": 0.9867303371429443,
+    "top5_label_ids": [
+      1,
+      5,
+      13,
+      2,
+      11
+    ],
+    "top5_labels": [
+      "form",
+      "scientific_report",
+      "questionnaire",
+      "email",
+      "invoice"
+    ],
+    "top5_confidences": [
+      0.9867303371429443,
+      0.003685970790684223,
+      0.0016649056924507022,
+      0.0015679859789088368,
+      0.0015249022981151938
+    ]
+  },
+  {
+    "filename": "09__true-email__imagesf__f__n__v__fnv76c00__2084289542b.tif",
+    "source_relative_path": "imagesf/f/n/v/fnv76c00/2084289542b.tif",
+    "true_label_id": 2,
+    "true_label": "email",
+    "expected_label_id": 2,
+    "expected_label": "email",
+    "top1_confidence": 0.1734764277935028,
+    "top5_label_ids": [
+      2,
+      14,
+      13,
+      12,
+      1
+    ],
+    "top5_labels": [
+      "email",
+      "resume",
+      "questionnaire",
+      "presentation",
+      "form"
+    ],
+    "top5_confidences": [
+      0.1734764277935028,
+      0.1702209860086441,
+      0.13257724046707153,
+      0.11946453154087067,
+      0.10410180687904358
+    ]
+  },
+  {
+    "filename": "10__true-email__imagesd__d__p__h__dph37d00__2074178762e_8763.tif",
+    "source_relative_path": "imagesd/d/p/h/dph37d00/2074178762e_8763.tif",
+    "true_label_id": 2,
+    "true_label": "email",
+    "expected_label_id": 2,
+    "expected_label": "email",
+    "top1_confidence": 0.9867268800735474,
+    "top5_label_ids": [
+      2,
+      8,
+      14,
+      5,
+      10
+    ],
+    "top5_labels": [
+      "email",
+      "file_folder",
+      "resume",
+      "scientific_report",
+      "budget"
+    ],
+    "top5_confidences": [
+      0.9867268800735474,
+      0.005242508370429277,
+      0.001346467761322856,
+      0.0010149235604330897,
+      0.0008676354191266
+    ]
+  },
+  {
+    "filename": "11__true-email__imagesd__d__c__i__dci22c00__2085270989.tif",
+    "source_relative_path": "imagesd/d/c/i/dci22c00/2085270989.tif",
+    "true_label_id": 2,
+    "true_label": "email",
+    "expected_label_id": 2,
+    "expected_label": "email",
+    "top1_confidence": 0.9998076558113098,
+    "top5_label_ids": [
+      2,
+      8,
+      10,
+      11,
+      14
+    ],
+    "top5_labels": [
+      "email",
+      "file_folder",
+      "budget",
+      "invoice",
+      "resume"
+    ],
+    "top5_confidences": [
+      0.9998076558113098,
+      3.8253816455835477e-05,
+      2.9340093533392064e-05,
+      2.396290801698342e-05,
+      2.3958975361892954e-05
+    ]
+  },
+  {
+    "filename": "12__true-handwritten__imagesa__a__g__d__agd68d00__503236490_503236540.tif",
+    "source_relative_path": "imagesa/a/g/d/agd68d00/503236490_503236540.tif",
+    "true_label_id": 3,
+    "true_label": "handwritten",
+    "expected_label_id": 15,
+    "expected_label": "memo",
+    "top1_confidence": 0.16902968287467957,
+    "top5_label_ids": [
+      15,
+      7,
+      0,
+      3,
+      13
+    ],
+    "top5_labels": [
+      "memo",
+      "specification",
+      "letter",
+      "handwritten",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.16902968287467957,
+      0.1406169831752777,
+      0.13135051727294922,
+      0.12317419052124023,
+      0.10413792729377747
+    ]
+  },
+  {
+    "filename": "13__true-handwritten__imagesc__c__a__u__cau45a00__505315648+-5650.tif",
+    "source_relative_path": "imagesc/c/a/u/cau45a00/505315648+-5650.tif",
+    "true_label_id": 3,
+    "true_label": "handwritten",
+    "expected_label_id": 3,
+    "expected_label": "handwritten",
+    "top1_confidence": 0.9602699279785156,
+    "top5_label_ids": [
+      3,
+      1,
+      11,
+      7,
+      13
+    ],
+    "top5_labels": [
+      "handwritten",
+      "form",
+      "invoice",
+      "specification",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.9602699279785156,
+      0.02128836140036583,
+      0.011502400040626526,
+      0.0025488310493528843,
+      0.0018529087537899613
+    ]
+  },
+  {
+    "filename": "14__true-handwritten__imagese__e__a__w__eaw33d00__512301956_512301957.tif",
+    "source_relative_path": "imagese/e/a/w/eaw33d00/512301956_512301957.tif",
+    "true_label_id": 3,
+    "true_label": "handwritten",
+    "expected_label_id": 3,
+    "expected_label": "handwritten",
+    "top1_confidence": 0.99986732006073,
+    "top5_label_ids": [
+      3,
+      1,
+      7,
+      0,
+      15
+    ],
+    "top5_labels": [
+      "handwritten",
+      "form",
+      "specification",
+      "letter",
+      "memo"
+    ],
+    "top5_confidences": [
+      0.99986732006073,
+      3.0319801226141863e-05,
+      2.4832092094584368e-05,
+      2.0292041881475598e-05,
+      1.4793258742429316e-05
+    ]
+  },
+  {
+    "filename": "15__true-advertisement__imagesa__a__y__q__ayq93c00__2064366089.tif",
+    "source_relative_path": "imagesa/a/y/q/ayq93c00/2064366089.tif",
+    "true_label_id": 4,
+    "true_label": "advertisement",
+    "expected_label_id": 1,
+    "expected_label": "form",
+    "top1_confidence": 0.1792260855436325,
+    "top5_label_ids": [
+      1,
+      12,
+      2,
+      10,
+      15
+    ],
+    "top5_labels": [
+      "form",
+      "presentation",
+      "email",
+      "budget",
+      "memo"
+    ],
+    "top5_confidences": [
+      0.1792260855436325,
+      0.15589922666549683,
+      0.13047397136688232,
+      0.09153807908296585,
+      0.08297767490148544
+    ]
+  },
+  {
+    "filename": "16__true-advertisement__imagesa__a__i__w__aiw57c00__2073366152.tif",
+    "source_relative_path": "imagesa/a/i/w/aiw57c00/2073366152.tif",
+    "true_label_id": 4,
+    "true_label": "advertisement",
+    "expected_label_id": 4,
+    "expected_label": "advertisement",
+    "top1_confidence": 0.9211462140083313,
+    "top5_label_ids": [
+      4,
+      11,
+      2,
+      10,
+      7
+    ],
+    "top5_labels": [
+      "advertisement",
+      "invoice",
+      "email",
+      "budget",
+      "specification"
+    ],
+    "top5_confidences": [
+      0.9211462140083313,
+      0.027197666466236115,
+      0.015441794879734516,
+      0.012164969928562641,
+      0.004307206254452467
+    ]
+  },
+  {
+    "filename": "17__true-advertisement__imagesf__f__u__n__fun33c00__92207703.tif",
+    "source_relative_path": "imagesf/f/u/n/fun33c00/92207703.tif",
+    "true_label_id": 4,
+    "true_label": "advertisement",
+    "expected_label_id": 4,
+    "expected_label": "advertisement",
+    "top1_confidence": 0.9996697902679443,
+    "top5_label_ids": [
+      4,
+      9,
+      3,
+      6,
+      12
+    ],
+    "top5_labels": [
+      "advertisement",
+      "news_article",
+      "handwritten",
+      "scientific_publication",
+      "presentation"
+    ],
+    "top5_confidences": [
+      0.9996697902679443,
+      0.00023264660558197647,
+      3.7635447370121256e-05,
+      1.8973805708810687e-05,
+      1.7793840015656315e-05
+    ]
+  },
+  {
+    "filename": "18__true-scientific_report__imagesf__f__d__s__fds69c00__50177073-7103.tif",
+    "source_relative_path": "imagesf/f/d/s/fds69c00/50177073-7103.tif",
+    "true_label_id": 5,
+    "true_label": "scientific_report",
+    "expected_label_id": 12,
+    "expected_label": "presentation",
+    "top1_confidence": 0.16374926269054413,
+    "top5_label_ids": [
+      12,
+      5,
+      6,
+      10,
+      13
+    ],
+    "top5_labels": [
+      "presentation",
+      "scientific_report",
+      "scientific_publication",
+      "budget",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.16374926269054413,
+      0.1306922286748886,
+      0.12694993615150452,
+      0.10087225586175919,
+      0.09677349776029587
+    ]
+  },
+  {
+    "filename": "19__true-scientific_report__imagesc__c__s__w__csw55c00__2082558682_8683.tif",
+    "source_relative_path": "imagesc/c/s/w/csw55c00/2082558682_8683.tif",
+    "true_label_id": 5,
+    "true_label": "scientific_report",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.4559236168861389,
+    "top5_label_ids": [
+      10,
+      5,
+      1,
+      11,
+      13
+    ],
+    "top5_labels": [
+      "budget",
+      "scientific_report",
+      "form",
+      "invoice",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.4559236168861389,
+      0.35507383942604065,
+      0.10219527781009674,
+      0.026546308770775795,
+      0.016569115221500397
+    ]
+  },
+  {
+    "filename": "20__true-scientific_report__imagesa__a__n__z__anz67e00__2062094319_2062094322.tif",
+    "source_relative_path": "imagesa/a/n/z/anz67e00/2062094319_2062094322.tif",
+    "true_label_id": 5,
+    "true_label": "scientific_report",
+    "expected_label_id": 3,
+    "expected_label": "handwritten",
+    "top1_confidence": 0.9922521710395813,
+    "top5_label_ids": [
+      3,
+      5,
+      12,
+      15,
+      1
+    ],
+    "top5_labels": [
+      "handwritten",
+      "scientific_report",
+      "presentation",
+      "memo",
+      "form"
+    ],
+    "top5_confidences": [
+      0.9922521710395813,
+      0.00165195029694587,
+      0.00145859329495579,
+      0.0010297386907041073,
+      0.0008976355311460793
+    ]
+  },
+  {
+    "filename": "21__true-scientific_publication__imagesh__h__b__d__hbd22d00__2060453713_3725.tif",
+    "source_relative_path": "imagesh/h/b/d/hbd22d00/2060453713_3725.tif",
+    "true_label_id": 6,
+    "true_label": "scientific_publication",
+    "expected_label_id": 12,
+    "expected_label": "presentation",
+    "top1_confidence": 0.154169961810112,
+    "top5_label_ids": [
+      12,
+      9,
+      5,
+      14,
+      6
+    ],
+    "top5_labels": [
+      "presentation",
+      "news_article",
+      "scientific_report",
+      "resume",
+      "scientific_publication"
+    ],
+    "top5_confidences": [
+      0.154169961810112,
+      0.13927598297595978,
+      0.1277078539133072,
+      0.12670782208442688,
+      0.11482768505811691
+    ]
+  },
+  {
+    "filename": "22__true-scientific_publication__imagesh__h__w__c__hwc42d00__1003929265_9268.tif",
+    "source_relative_path": "imagesh/h/w/c/hwc42d00/1003929265_9268.tif",
+    "true_label_id": 6,
+    "true_label": "scientific_publication",
+    "expected_label_id": 6,
+    "expected_label": "scientific_publication",
+    "top1_confidence": 0.9585998058319092,
+    "top5_label_ids": [
+      6,
+      9,
+      5,
+      4,
+      12
+    ],
+    "top5_labels": [
+      "scientific_publication",
+      "news_article",
+      "scientific_report",
+      "advertisement",
+      "presentation"
+    ],
+    "top5_confidences": [
+      0.9585998058319092,
+      0.023890182375907898,
+      0.011523927561938763,
+      0.0020798989571630955,
+      0.0012527303770184517
+    ]
+  },
+  {
+    "filename": "23__true-scientific_publication__imagesh__h__r__g__hrg67d00__2065202616_2621.tif",
+    "source_relative_path": "imagesh/h/r/g/hrg67d00/2065202616_2621.tif",
+    "true_label_id": 6,
+    "true_label": "scientific_publication",
+    "expected_label_id": 6,
+    "expected_label": "scientific_publication",
+    "top1_confidence": 0.999207079410553,
+    "top5_label_ids": [
+      6,
+      5,
+      9,
+      14,
+      2
+    ],
+    "top5_labels": [
+      "scientific_publication",
+      "scientific_report",
+      "news_article",
+      "resume",
+      "email"
+    ],
+    "top5_confidences": [
+      0.999207079410553,
+      0.00046466864296235144,
+      0.00013093944289721549,
+      3.953709892812185e-05,
+      3.4611421142471954e-05
+    ]
+  },
+  {
+    "filename": "24__true-specification__imagesb__b__i__t__bit23f00__0000061312.tif",
+    "source_relative_path": "imagesb/b/i/t/bit23f00/0000061312.tif",
+    "true_label_id": 7,
+    "true_label": "specification",
+    "expected_label_id": 13,
+    "expected_label": "questionnaire",
+    "top1_confidence": 0.159835085272789,
+    "top5_label_ids": [
+      13,
+      7,
+      8,
+      10,
+      3
+    ],
+    "top5_labels": [
+      "questionnaire",
+      "specification",
+      "file_folder",
+      "budget",
+      "handwritten"
+    ],
+    "top5_confidences": [
+      0.159835085272789,
+      0.13933010399341583,
+      0.12459241598844528,
+      0.12221754342317581,
+      0.10095664858818054
+    ]
+  },
+  {
+    "filename": "25__true-specification__imagesh__h__e__c__hec27d00__2075387011.tif",
+    "source_relative_path": "imagesh/h/e/c/hec27d00/2075387011.tif",
+    "true_label_id": 7,
+    "true_label": "specification",
+    "expected_label_id": 7,
+    "expected_label": "specification",
+    "top1_confidence": 0.8623529076576233,
+    "top5_label_ids": [
+      7,
+      1,
+      13,
+      10,
+      15
+    ],
+    "top5_labels": [
+      "specification",
+      "form",
+      "questionnaire",
+      "budget",
+      "memo"
+    ],
+    "top5_confidences": [
+      0.8623529076576233,
+      0.049615468829870224,
+      0.02089448645710945,
+      0.019437275826931,
+      0.01841956004500389
+    ]
+  },
+  {
+    "filename": "26__true-specification__imagesh__h__d__u__hdu52e00__2057680627.tif",
+    "source_relative_path": "imagesh/h/d/u/hdu52e00/2057680627.tif",
+    "true_label_id": 7,
+    "true_label": "specification",
+    "expected_label_id": 7,
+    "expected_label": "specification",
+    "top1_confidence": 0.9996033310890198,
+    "top5_label_ids": [
+      7,
+      10,
+      5,
+      14,
+      1
+    ],
+    "top5_labels": [
+      "specification",
+      "budget",
+      "scientific_report",
+      "resume",
+      "form"
+    ],
+    "top5_confidences": [
+      0.9996033310890198,
+      0.00010047585237771273,
+      7.901142816990614e-05,
+      4.986387284589e-05,
+      4.6559423935832456e-05
+    ]
+  },
+  {
+    "filename": "27__true-file_folder__imagesa__a__n__t__ant02e00__2028724661.tif",
+    "source_relative_path": "imagesa/a/n/t/ant02e00/2028724661.tif",
+    "true_label_id": 8,
+    "true_label": "file_folder",
+    "expected_label_id": 9,
+    "expected_label": "news_article",
+    "top1_confidence": 0.20562885701656342,
+    "top5_label_ids": [
+      9,
+      12,
+      13,
+      5,
+      4
+    ],
+    "top5_labels": [
+      "news_article",
+      "presentation",
+      "questionnaire",
+      "scientific_report",
+      "advertisement"
+    ],
+    "top5_confidences": [
+      0.20562885701656342,
+      0.1750030219554901,
+      0.140802264213562,
+      0.10826987773180008,
+      0.08513378351926804
+    ]
+  },
+  {
+    "filename": "28__true-file_folder__imagesh__h__q__t__hqt33e00__2047860512.tif",
+    "source_relative_path": "imagesh/h/q/t/hqt33e00/2047860512.tif",
+    "true_label_id": 8,
+    "true_label": "file_folder",
+    "expected_label_id": 8,
+    "expected_label": "file_folder",
+    "top1_confidence": 0.9166498184204102,
+    "top5_label_ids": [
+      8,
+      12,
+      13,
+      9,
+      6
+    ],
+    "top5_labels": [
+      "file_folder",
+      "presentation",
+      "questionnaire",
+      "news_article",
+      "scientific_publication"
+    ],
+    "top5_confidences": [
+      0.9166498184204102,
+      0.028917396441102028,
+      0.01837705262005329,
+      0.006651435513049364,
+      0.005566168110817671
+    ]
+  },
+  {
+    "filename": "29__true-file_folder__imagesh__h__m__p__hmp98e00__2023362310.tif",
+    "source_relative_path": "imagesh/h/m/p/hmp98e00/2023362310.tif",
+    "true_label_id": 8,
+    "true_label": "file_folder",
+    "expected_label_id": 8,
+    "expected_label": "file_folder",
+    "top1_confidence": 0.9987390637397766,
+    "top5_label_ids": [
+      8,
+      12,
+      14,
+      10,
+      13
+    ],
+    "top5_labels": [
+      "file_folder",
+      "presentation",
+      "resume",
+      "budget",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.9987390637397766,
+      0.0003197388141416013,
+      0.0002204037009505555,
+      0.00015883956803008914,
+      0.0001543442194815725
+    ]
+  },
+  {
+    "filename": "30__true-news_article__imagesd__d__z__x__dzx02f00__ton01613.93_ton01613.94.tif",
+    "source_relative_path": "imagesd/d/z/x/dzx02f00/ton01613.93_ton01613.94.tif",
+    "true_label_id": 9,
+    "true_label": "news_article",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.17254628241062164,
+    "top5_label_ids": [
+      10,
+      5,
+      13,
+      12,
+      11
+    ],
+    "top5_labels": [
+      "budget",
+      "scientific_report",
+      "questionnaire",
+      "presentation",
+      "invoice"
+    ],
+    "top5_confidences": [
+      0.17254628241062164,
+      0.1617419272661209,
+      0.12209983915090561,
+      0.08683324605226517,
+      0.08019545674324036
+    ]
+  },
+  {
+    "filename": "31__true-news_article__imagese__e__o__j__eoj60c00__2074104814.tif",
+    "source_relative_path": "imagese/e/o/j/eoj60c00/2074104814.tif",
+    "true_label_id": 9,
+    "true_label": "news_article",
+    "expected_label_id": 9,
+    "expected_label": "news_article",
+    "top1_confidence": 0.8979671597480774,
+    "top5_label_ids": [
+      9,
+      6,
+      7,
+      4,
+      10
+    ],
+    "top5_labels": [
+      "news_article",
+      "scientific_publication",
+      "specification",
+      "advertisement",
+      "budget"
+    ],
+    "top5_confidences": [
+      0.8979671597480774,
+      0.08415080606937408,
+      0.0046682339161634445,
+      0.004002599976956844,
+      0.00243284460157156
+    ]
+  },
+  {
+    "filename": "32__true-news_article__imagesc__c__a__w__caw48c00__2083790353.tif",
+    "source_relative_path": "imagesc/c/a/w/caw48c00/2083790353.tif",
+    "true_label_id": 9,
+    "true_label": "news_article",
+    "expected_label_id": 9,
+    "expected_label": "news_article",
+    "top1_confidence": 0.999286949634552,
+    "top5_label_ids": [
+      9,
+      6,
+      5,
+      4,
+      0
+    ],
+    "top5_labels": [
+      "news_article",
+      "scientific_publication",
+      "scientific_report",
+      "advertisement",
+      "letter"
+    ],
+    "top5_confidences": [
+      0.999286949634552,
+      0.0004532852617558092,
+      8.33147278171964e-05,
+      5.413772305473685e-05,
+      3.174629091518e-05
+    ]
+  },
+  {
+    "filename": "33__true-budget__imagesa__a__m__y__amy90e00__91751475.tif",
+    "source_relative_path": "imagesa/a/m/y/amy90e00/91751475.tif",
+    "true_label_id": 10,
+    "true_label": "budget",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.17483475804328918,
+    "top5_label_ids": [
+      10,
+      15,
+      14,
+      5,
+      1
+    ],
+    "top5_labels": [
+      "budget",
+      "memo",
+      "resume",
+      "scientific_report",
+      "form"
+    ],
+    "top5_confidences": [
+      0.17483475804328918,
+      0.15816327929496765,
+      0.1521795392036438,
+      0.12234571576118469,
+      0.07812657207250595
+    ]
+  },
+  {
+    "filename": "34__true-budget__imagesb__b__k__r__bkr06e00__2049418161.tif",
+    "source_relative_path": "imagesb/b/k/r/bkr06e00/2049418161.tif",
+    "true_label_id": 10,
+    "true_label": "budget",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.6339442133903503,
+    "top5_label_ids": [
+      10,
+      5,
+      12,
+      11,
+      8
+    ],
+    "top5_labels": [
+      "budget",
+      "scientific_report",
+      "presentation",
+      "invoice",
+      "file_folder"
+    ],
+    "top5_confidences": [
+      0.6339442133903503,
+      0.08715881407260895,
+      0.05243886634707451,
+      0.048727113753557205,
+      0.047889344394207
+    ]
+  },
+  {
+    "filename": "35__true-budget__imagesa__a__k__a__aka45a00__83311278.tif",
+    "source_relative_path": "imagesa/a/k/a/aka45a00/83311278.tif",
+    "true_label_id": 10,
+    "true_label": "budget",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.9892009496688843,
+    "top5_label_ids": [
+      10,
+      5,
+      7,
+      11,
+      12
+    ],
+    "top5_labels": [
+      "budget",
+      "scientific_report",
+      "specification",
+      "invoice",
+      "presentation"
+    ],
+    "top5_confidences": [
+      0.9892009496688843,
+      0.004333446267992258,
+      0.003706851042807102,
+      0.0006927535287104547,
+      0.000611156749073416
+    ]
+  },
+  {
+    "filename": "36__true-invoice__imagesc__c__n__j__cnj47c00__2084022637.tif",
+    "source_relative_path": "imagesc/c/n/j/cnj47c00/2084022637.tif",
+    "true_label_id": 11,
+    "true_label": "invoice",
+    "expected_label_id": 15,
+    "expected_label": "memo",
+    "top1_confidence": 0.1312905251979828,
+    "top5_label_ids": [
+      15,
+      12,
+      13,
+      1,
+      5
+    ],
+    "top5_labels": [
+      "memo",
+      "presentation",
+      "questionnaire",
+      "form",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.1312905251979828,
+      0.11153486371040344,
+      0.10978793352842331,
+      0.09255347400903702,
+      0.0923086553812027
+    ]
+  },
+  {
+    "filename": "37__true-invoice__imagesf__f__r__r__frr40c00__ti15269401.tif",
+    "source_relative_path": "imagesf/f/r/r/frr40c00/ti15269401.tif",
+    "true_label_id": 11,
+    "true_label": "invoice",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.6252700686454773,
+    "top5_label_ids": [
+      10,
+      11,
+      5,
+      13,
+      15
+    ],
+    "top5_labels": [
+      "budget",
+      "invoice",
+      "scientific_report",
+      "questionnaire",
+      "memo"
+    ],
+    "top5_confidences": [
+      0.6252700686454773,
+      0.13820992410182953,
+      0.07971407473087311,
+      0.06113448366522789,
+      0.03796694800257683
+    ]
+  },
+  {
+    "filename": "38__true-invoice__imagese__e__g__y__egy60e00__82894692.tif",
+    "source_relative_path": "imagese/e/g/y/egy60e00/82894692.tif",
+    "true_label_id": 11,
+    "true_label": "invoice",
+    "expected_label_id": 11,
+    "expected_label": "invoice",
+    "top1_confidence": 0.9927592277526855,
+    "top5_label_ids": [
+      11,
+      1,
+      10,
+      3,
+      5
+    ],
+    "top5_labels": [
+      "invoice",
+      "form",
+      "budget",
+      "handwritten",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.9927592277526855,
+      0.003834449453279376,
+      0.0020940853282809258,
+      0.0004480842035263777,
+      0.0002922961430158466
+    ]
+  },
+  {
+    "filename": "39__true-presentation__imagesa__a__o__w__aow66e00__2047366661.tif",
+    "source_relative_path": "imagesa/a/o/w/aow66e00/2047366661.tif",
+    "true_label_id": 12,
+    "true_label": "presentation",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.1478276252746582,
+    "top5_label_ids": [
+      10,
+      5,
+      15,
+      7,
+      9
+    ],
+    "top5_labels": [
+      "budget",
+      "scientific_report",
+      "memo",
+      "specification",
+      "news_article"
+    ],
+    "top5_confidences": [
+      0.1478276252746582,
+      0.1391013115644455,
+      0.13423649966716766,
+      0.11360763758420944,
+      0.08647462725639343
+    ]
+  },
+  {
+    "filename": "40__true-presentation__imagesb__b__p__v__bpv53a00__2024839590_9600.tif",
+    "source_relative_path": "imagesb/b/p/v/bpv53a00/2024839590_9600.tif",
+    "true_label_id": 12,
+    "true_label": "presentation",
+    "expected_label_id": 5,
+    "expected_label": "scientific_report",
+    "top1_confidence": 0.634030282497406,
+    "top5_label_ids": [
+      5,
+      12,
+      1,
+      13,
+      10
+    ],
+    "top5_labels": [
+      "scientific_report",
+      "presentation",
+      "form",
+      "questionnaire",
+      "budget"
+    ],
+    "top5_confidences": [
+      0.634030282497406,
+      0.29664498567581177,
+      0.019331742078065872,
+      0.01922018826007843,
+      0.014266333542764187
+    ]
+  },
+  {
+    "filename": "41__true-presentation__imagesg__g__j__e__gje67d00__2076921695_1718.tif",
+    "source_relative_path": "imagesg/g/j/e/gje67d00/2076921695_1718.tif",
+    "true_label_id": 12,
+    "true_label": "presentation",
+    "expected_label_id": 12,
+    "expected_label": "presentation",
+    "top1_confidence": 0.9972097277641296,
+    "top5_label_ids": [
+      12,
+      9,
+      5,
+      4,
+      1
+    ],
+    "top5_labels": [
+      "presentation",
+      "news_article",
+      "scientific_report",
+      "advertisement",
+      "form"
+    ],
+    "top5_confidences": [
+      0.9972097277641296,
+      0.0008599210414104164,
+      0.0004193015629425645,
+      0.0003818224649876356,
+      0.00025573765742592514
+    ]
+  },
+  {
+    "filename": "42__true-questionnaire__imagesb__b__s__x__bsx21f00__0001455735.tif",
+    "source_relative_path": "imagesb/b/s/x/bsx21f00/0001455735.tif",
+    "true_label_id": 13,
+    "true_label": "questionnaire",
+    "expected_label_id": 10,
+    "expected_label": "budget",
+    "top1_confidence": 0.17052580416202545,
+    "top5_label_ids": [
+      10,
+      11,
+      12,
+      15,
+      1
+    ],
+    "top5_labels": [
+      "budget",
+      "invoice",
+      "presentation",
+      "memo",
+      "form"
+    ],
+    "top5_confidences": [
+      0.17052580416202545,
+      0.17007167637348175,
+      0.14522477984428406,
+      0.12923596799373627,
+      0.10960528999567032
+    ]
+  },
+  {
+    "filename": "43__true-questionnaire__imagesa__a__w__x__awx00f00__0000452220.tif",
+    "source_relative_path": "imagesa/a/w/x/awx00f00/0000452220.tif",
+    "true_label_id": 13,
+    "true_label": "questionnaire",
+    "expected_label_id": 15,
+    "expected_label": "memo",
+    "top1_confidence": 0.5205885767936707,
+    "top5_label_ids": [
+      15,
+      5,
+      0,
+      12,
+      4
+    ],
+    "top5_labels": [
+      "memo",
+      "scientific_report",
+      "letter",
+      "presentation",
+      "advertisement"
+    ],
+    "top5_confidences": [
+      0.5205885767936707,
+      0.1547599583864212,
+      0.06849109381437302,
+      0.06734685599803925,
+      0.05861556529998779
+    ]
+  },
+  {
+    "filename": "44__true-questionnaire__imagesg__g__s__f__gsf33f00__0013168781.tif",
+    "source_relative_path": "imagesg/g/s/f/gsf33f00/0013168781.tif",
+    "true_label_id": 13,
+    "true_label": "questionnaire",
+    "expected_label_id": 4,
+    "expected_label": "advertisement",
+    "top1_confidence": 0.9956848621368408,
+    "top5_label_ids": [
+      4,
+      9,
+      6,
+      12,
+      3
+    ],
+    "top5_labels": [
+      "advertisement",
+      "news_article",
+      "scientific_publication",
+      "presentation",
+      "handwritten"
+    ],
+    "top5_confidences": [
+      0.9956848621368408,
+      0.0020363095682114363,
+      0.0012375441147014499,
+      0.0006508482038043439,
+      0.00018494785763323307
+    ]
+  },
+  {
+    "filename": "45__true-resume__imagesa__a__q__g__aqg20a00__10121443_10121444.tif",
+    "source_relative_path": "imagesa/a/q/g/aqg20a00/10121443_10121444.tif",
+    "true_label_id": 14,
+    "true_label": "resume",
+    "expected_label_id": 0,
+    "expected_label": "letter",
+    "top1_confidence": 0.15550386905670166,
+    "top5_label_ids": [
+      0,
+      5,
+      6,
+      14,
+      8
+    ],
+    "top5_labels": [
+      "letter",
+      "scientific_report",
+      "scientific_publication",
+      "resume",
+      "file_folder"
+    ],
+    "top5_confidences": [
+      0.15550386905670166,
+      0.14029115438461304,
+      0.09604889899492264,
+      0.08608144521713257,
+      0.08122827857732773
+    ]
+  },
+  {
+    "filename": "46__true-resume__imagesa__a__k__a__aka79c00__50191868-1870.tif",
+    "source_relative_path": "imagesa/a/k/a/aka79c00/50191868-1870.tif",
+    "true_label_id": 14,
+    "true_label": "resume",
+    "expected_label_id": 14,
+    "expected_label": "resume",
+    "top1_confidence": 0.9186615347862244,
+    "top5_label_ids": [
+      14,
+      0,
+      7,
+      15,
+      10
+    ],
+    "top5_labels": [
+      "resume",
+      "letter",
+      "specification",
+      "memo",
+      "budget"
+    ],
+    "top5_confidences": [
+      0.9186615347862244,
+      0.04513410106301308,
+      0.02344660274684429,
+      0.003538041841238737,
+      0.003122945548966527
+    ]
+  },
+  {
+    "filename": "47__true-resume__imagesb__b__a__n__ban06d00__50513055-3056.tif",
+    "source_relative_path": "imagesb/b/a/n/ban06d00/50513055-3056.tif",
+    "true_label_id": 14,
+    "true_label": "resume",
+    "expected_label_id": 14,
+    "expected_label": "resume",
+    "top1_confidence": 0.9989091157913208,
+    "top5_label_ids": [
+      14,
+      1,
+      15,
+      2,
+      0
+    ],
+    "top5_labels": [
+      "resume",
+      "form",
+      "memo",
+      "email",
+      "letter"
+    ],
+    "top5_confidences": [
+      0.9989091157913208,
+      0.0003532265545800328,
+      0.00021888036280870438,
+      0.00021444651065394282,
+      6.643641972914338e-05
+    ]
+  },
+  {
+    "filename": "48__true-memo__imagesg__g__b__c__gbc00f00__0000051340.tif",
+    "source_relative_path": "imagesg/g/b/c/gbc00f00/0000051340.tif",
+    "true_label_id": 15,
+    "true_label": "memo",
+    "expected_label_id": 5,
+    "expected_label": "scientific_report",
+    "top1_confidence": 0.1402602344751358,
+    "top5_label_ids": [
+      5,
+      12,
+      15,
+      13,
+      8
+    ],
+    "top5_labels": [
+      "scientific_report",
+      "presentation",
+      "memo",
+      "questionnaire",
+      "file_folder"
+    ],
+    "top5_confidences": [
+      0.1402602344751358,
+      0.13439075648784637,
+      0.1206028014421463,
+      0.11295649409294128,
+      0.09439154714345932
+    ]
+  },
+  {
+    "filename": "49__true-memo__imagesb__b__a__b__bab92e00__2048625212.tif",
+    "source_relative_path": "imagesb/b/a/b/bab92e00/2048625212.tif",
+    "true_label_id": 15,
+    "true_label": "memo",
+    "expected_label_id": 0,
+    "expected_label": "letter",
+    "top1_confidence": 0.5184065103530884,
+    "top5_label_ids": [
+      0,
+      15,
+      12,
+      5,
+      13
+    ],
+    "top5_labels": [
+      "letter",
+      "memo",
+      "presentation",
+      "scientific_report",
+      "questionnaire"
+    ],
+    "top5_confidences": [
+      0.5184065103530884,
+      0.42036765813827515,
+      0.02071799524128437,
+      0.013482793234288692,
+      0.013104825280606747
+    ]
+  },
+  {
+    "filename": "50__true-memo__imagesh__h__c__o__hco75c00__2078437338a.tif",
+    "source_relative_path": "imagesh/h/c/o/hco75c00/2078437338a.tif",
+    "true_label_id": 15,
+    "true_label": "memo",
+    "expected_label_id": 2,
+    "expected_label": "email",
+    "top1_confidence": 0.9486181735992432,
+    "top5_label_ids": [
+      2,
+      10,
+      1,
+      15,
+      5
+    ],
+    "top5_labels": [
+      "email",
+      "budget",
+      "form",
+      "memo",
+      "scientific_report"
+    ],
+    "top5_confidences": [
+      0.9486181735992432,
+      0.01542753353714943,
+      0.009627717547118664,
+      0.007003268226981163,
+      0.005932262167334557
+    ]
+  }
+]

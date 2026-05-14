@@ -9,8 +9,13 @@ from fastapi import FastAPI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from app.classifier.inference import (
+    ClassifierArtifactError,
+    assert_classifier_artifacts,
+)
 from app.core.config import get_settings
 from app.db.models import CasbinRule
+from app.infra.cache import init_redis_cache
 from app.infra.vault import VaultClient
 
 logger = structlog.get_logger(__name__)
@@ -21,13 +26,27 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
 
-    # Must initialize FastAPI-Cache here + redis client 
+    # 0. FastAPICache against Redis. The @cache decorators on
+    #    /batches and /predictions/recent assert ``init`` was called;
+    #    skipping this surfaces as a 500 on the first cached read.
+    await init_redis_cache(settings.redis_url)
 
-    # 1. Database engine
+    # 1. Model artifacts. The classifier weights + card live on disk in
+    #    the image (Git LFS materialises them at build time). Verifying
+    #    presence + SHA-256 here means a corrupted/missing weight file
+    #    fails boot rather than surfacing as a runtime 500 on first
+    #    inference.
+    try:
+        assert_classifier_artifacts()
+    except ClassifierArtifactError as exc:
+        logger.critical("refuse_to_boot", reason="classifier_artifacts", error=str(exc))
+        sys.exit(1)
+
+    # 2. Database engine
     engine = create_async_engine(settings.database_url, echo=False)
     app.state.engine = engine
 
-    # 2. Vault client + JWT secret
+    # 3. Vault client + JWT secret
     try:
         vault = VaultClient(addr=settings.vault_addr, token=settings.vault_token)
         # vault_jwt_secret_path is the full KV v2 path e.g. "secret/data/jwt"
@@ -44,7 +63,10 @@ async def lifespan(app: FastAPI):
     app.state.vault = vault
     app.state.jwt_secret = jwt_secret
 
-    # 3. Casbin enforcer + non-empty policy guard
+    # 4. Casbin enforcer + non-empty policy guard. The CSV load failing
+    #    is structural (model.conf / policy.csv wrong); the table-empty
+    #    branch catches a missing Alembic seed migration that would
+    #    otherwise let unauthorised requests through silently.
     try:
         enforcer = casbin.AsyncEnforcer("app/casbin/model.conf", "app/casbin/policy.csv")
         await enforcer.load_policy()
@@ -56,7 +78,7 @@ async def lifespan(app: FastAPI):
         result = await session.execute(select(CasbinRule))
         if result.scalars().first() is None:
             logger.critical("refuse_to_boot", reason="casbin_policy_table_empty")
-            #sys.exit(1)
+            sys.exit(1)
 
     app.state.enforcer = enforcer
 

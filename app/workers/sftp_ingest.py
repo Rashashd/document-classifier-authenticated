@@ -46,7 +46,7 @@ REMOTE_QUARANTINE_DIR: str = "/quarantine"
 TIFF_SUFFIXES: tuple[str, ...] = (".tiff", ".tif")
 TIFF_MAGIC_BYTES: tuple[bytes, ...] = (b"II*\x00", b"MM\x00*")
 QUEUE_NAME: str = "classification_queue"
-INFERENCE_FUNC_PATH: str = "app.workers.inference.run"
+INFERENCE_FUNC_PATH: str = "app.workers.inference.run_inference"
 
 
 # -- logging -----------------------------------------------------------------

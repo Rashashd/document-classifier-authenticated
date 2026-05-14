@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.api.routers.audit import router as audit_router
 from app.api.routers.auth import router as auth_router
 from app.api.routers.batches import router as batches_router
+from app.api.routers.health import router as health_router
 from app.api.routers.predictions import router as predictions_router
 from app.api.routers.users import router as users_router
 from app.core.config import get_settings
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         lifespan=lifespan,
     )
+    app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)
     app.include_router(audit_router)

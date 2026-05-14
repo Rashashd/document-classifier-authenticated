@@ -46,7 +46,13 @@ jobs:
       SFTP_PASSWORD:       password123
       VAULT_TOKEN:         ci-noop
     steps:
+      # ``lfs: true`` pulls the real classifier.pt + golden fixtures.
+      # Without it the runner would only get LFS pointer text files and
+      # both the golden eval and the full-stack smoke would fail at
+      # ``assert_classifier_artifacts()`` with a SHA-256 mismatch.
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -116,8 +122,45 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
-        run: pytest tests/
+        run: pytest tests/ --ignore=tests/smoke
 
-      - name: Tear down infra services
+      # The golden eval needs the full PyTorch wheel + torchvision, plus
+      # the real classifier.pt from Git LFS. Excluded from the main
+      # pytest run above so an LFS regression surfaces as its own
+      # red step rather than getting buried.
+      - name: Install torch for golden eval
+        run: uv pip install --system "torch>=2.2.0" "torchvision>=0.17.0"
+
+      - name: Run golden-set regression check
+        run: python -m app.classifier.eval.golden
+
+      # Tear down before the full-stack pass so we boot the smoke test
+      # against a fully fresh stack (no test pollution in MinIO / db).
+      - name: Tear down infra services (pre-smoke)
+        if: always()
+        run: docker compose down -v
+
+      # ---- Full-stack smoke test ------------------------------------
+      # Boots EVERY compose service (api + both workers + vault-init
+      # + migrate), then exercises the production path:
+      # SFTP drop → worker-ingest → Redis → worker-inference → DB
+      # → cache invalidation → API. ``sleep 15`` is the cold-start
+      # budget: Postgres + Vault + the migration container + both
+      # workers loading torch. The smoke script polls /batches itself
+      # afterwards, so longer waits go inside the script.
+      - name: Boot full stack
+        run: docker compose up -d --build
+
+      - name: Wait for stack to warm up
+        run: sleep 15
+
+      - name: Run full-stack smoke
+        run: python tests/smoke/test_full_stack.py
+
+      - name: Dump compose logs (on smoke failure)
+        if: failure()
+        run: docker compose logs --tail=200
+
+      - name: Tear down full stack
         if: always()
         run: docker compose down -v
