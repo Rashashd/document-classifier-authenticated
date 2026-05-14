@@ -808,6 +808,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "minio" },
     { name = "paramiko" },
+    { name = "pillow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pytest" },
@@ -832,7 +833,6 @@ dev = [
     { name = "ruff" },
 ]
 ml = [
-    { name = "pillow" },
     { name = "torch" },
     { name = "torchvision" },
 ]
@@ -856,7 +856,7 @@ requires-dist = [
     { name = "minio", specifier = ">=7.2.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "paramiko", specifier = ">=3.4.0" },
-    { name = "pillow", marker = "extra == 'ml'", specifier = ">=10.0.0" },
+    { name = "pillow", specifier = ">=10.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },

@@ -151,15 +151,46 @@ jobs:
       - name: Boot full stack
         run: docker compose up -d --build
 
-      - name: Wait for stack to warm up
-        run: sleep 15
+      # Poll /health instead of a flat sleep. The API container has a
+      # cold-start cost (SHA-256 over classifier.pt, FastAPICache redis
+      # ping, Vault round-trip, Casbin policy load) plus has to wait on
+      # vault-init + migrate to complete. 90 s is generous; the smoke
+      # itself has its own internal polling beyond that.
+      - name: Wait for API /health
+        run: |
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "api is up after ${i} attempts"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api never became reachable on :8000"
+          docker compose ps
+          exit 1
 
       - name: Run full-stack smoke
         run: python tests/smoke/test_full_stack.py
 
-      - name: Dump compose logs (on smoke failure)
+      # Maximally noisy on failure: which containers exist (and their
+      # exit reason if dead), then the full logs of the three app
+      # services. --tail=200 is too aggressive when the crash is at
+      # boot — the relevant traceback is in the first ~50 lines.
+      - name: Dump compose state (on failure)
         if: failure()
-        run: docker compose logs --tail=200
+        run: |
+          echo "=== docker compose ps ==="
+          docker compose ps --all
+          echo "=== api logs ==="
+          docker compose logs api
+          echo "=== worker-ingest logs ==="
+          docker compose logs worker-ingest
+          echo "=== worker-inference logs ==="
+          docker compose logs worker-inference
+          echo "=== migrate logs ==="
+          docker compose logs migrate
+          echo "=== vault-init logs ==="
+          docker compose logs vault-init
 
       - name: Tear down full stack
         if: always()

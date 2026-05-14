@@ -39,6 +39,13 @@ dependencies = [
     "paramiko>=3.4.0",
     # HTTP client (async — no requests/time.sleep)
     "httpx>=0.27.0",
+    # Pillow is imported at module load time by app/classifier/inference.py.
+    # Keeping it in [ml] alone caused the api / worker-ingest containers
+    # (runtime-core target, no torch) to crash with ModuleNotFoundError at
+    # startup — the refuse-to-boot guard does
+    # `from app.classifier.inference import assert_classifier_artifacts`,
+    # which transitively imports PIL.Image before /health is reachable.
+    "pillow>=10.0.0",
     # Structured logging
     "structlog>=24.0.0",
     "pytest>=9.0.3",
@@ -49,7 +56,6 @@ dependencies = [
 ml = [
     "torch>=2.4.0",
     "torchvision>=0.19.0",
-    "pillow>=10.0.0",
 ]
 dev = [
     "pytest>=8.0.0",
