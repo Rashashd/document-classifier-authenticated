@@ -1,0 +1,98 @@
+{
+  "model_name": "rvl_cdip_convnext_tiny_100k",
+  "created_at_utc": "2026-05-14T12:12:22.836477+00:00",
+  "dataset": {
+    "name": "RVL-CDIP",
+    "source": "https://adamharley.com/rvl-cdip/",
+    "license_note": "Academic / research use; flag in LICENSES.md.",
+    "ocr_used": false,
+    "run_mode": "balanced_100k",
+    "full_run": false,
+    "full_dataset_note": "This is a balanced 100k-image run, not the full 400k RVL-CDIP train/val/test evaluation.",
+    "train_size_used": 80000,
+    "validation_size_used": 10000,
+    "test_size_used": 10000,
+    "train_samples_per_class": 5000,
+    "validation_samples_per_class": 625,
+    "test_samples_per_class": 625
+  },
+  "model": {
+    "backbone": "convnext_tiny",
+    "weights_enum": "ConvNeXt_Tiny_Weights.DEFAULT",
+    "freeze_policy": "linear_probe_then_partial_unfreeze_final_stage",
+    "num_classes": 16,
+    "class_names": [
+      "letter",
+      "form",
+      "email",
+      "handwritten",
+      "advertisement",
+      "scientific_report",
+      "scientific_publication",
+      "specification",
+      "file_folder",
+      "news_article",
+      "budget",
+      "invoice",
+      "presentation",
+      "questionnaire",
+      "resume",
+      "memo"
+    ],
+    "image_size": 224,
+    "normalization_mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "normalization_std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "sha256": "3351bb59e721a278444fdf3004d68bba6bdf43ed48fbe1b87b297322992f13f8"
+  },
+  "training": {
+    "seed": 42,
+    "batch_size": 64,
+    "linear_probe_epochs": 2,
+    "partial_unfreeze_epochs": 2,
+    "linear_probe_lr": 0.0003,
+    "fine_tune_lr": 1e-05,
+    "best_validation_top1": 0.726
+  },
+  "metrics": {
+    "test_top1": 0.7261,
+    "test_top5": 0.9388,
+    "per_class_accuracy": {
+      "letter": 0.6976,
+      "form": 0.5744,
+      "email": 0.92,
+      "handwritten": 0.8752,
+      "advertisement": 0.8272,
+      "scientific_report": 0.4576,
+      "scientific_publication": 0.8528,
+      "specification": 0.7904,
+      "file_folder": 0.9248,
+      "news_article": 0.7776,
+      "budget": 0.6688,
+      "invoice": 0.6704,
+      "presentation": 0.6928,
+      "questionnaire": 0.5344,
+      "resume": 0.7888,
+      "memo": 0.5648
+    },
+    "worst_class": "scientific_report",
+    "worst_class_accuracy": 0.4576,
+    "golden_set_size": 50
+  },
+  "environment": {
+    "python": "3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0]",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.35",
+    "torch": "2.10.0+cu128",
+    "torchvision": "0.25.0+cu128",
+    "cuda_available": true,
+    "cuda_version": "12.8",
+    "gpu_name": "Tesla T4"
+  }
+}
