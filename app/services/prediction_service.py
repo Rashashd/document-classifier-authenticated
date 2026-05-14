@@ -24,10 +24,15 @@ class PredictionService:
         self.session = session
 
     async def save_prediction(self, prediction_data: PredictionCreate) -> PredictionRead:
+        """Called by Person C's inference worker after a document is classified."""
         prediction = await self.repo.create(prediction_data)
+        # Commit the prediction to the database
         await self.session.commit()
+
+        # Invalidate caches that include this batch or recent predictions list
         await self.cache.invalidate_batch(prediction_data.batch_id)
         await self.cache.invalidate_recent_predictions()
+
         return PredictionRead.model_validate(prediction)
 
     async def get_prediction(self, prediction_id: uuid.UUID) -> PredictionRead | None:
@@ -45,22 +50,21 @@ class PredictionService:
         actor_id: uuid.UUID,
         request_id: str | None = None,
     ) -> PredictionRead | None:
+        """Used by reviewer endpoint. Logs an audit entry automatically."""
         prediction = await self.repo.update(prediction_id, updates)
         if prediction:
-            await self.audit.log_event(
-            actor_id=actor_id,
-            action="relabel",
-            target=f"/predictions/{prediction_id}",
-            request_id=request_id,
-            )
-            batch_id = prediction.batch_id  # store BEFORE commit
-            await self.session.commit()
-            await self.cache.invalidate_batch(batch_id)  # use the stored value
-            await self.cache.invalidate_recent_predictions()
+            # Write audit log BEFORE commit so it's in the same transaction
             await self.audit.log_event(
                 actor_id=actor_id,
                 action="relabel",
                 target=f"/predictions/{prediction_id}",
                 request_id=request_id,
             )
+            # Commit both the prediction update and the audit entry
+            await self.session.commit()
+
+            # Invalidate affected caches
+            await self.cache.invalidate_batch(prediction.batch_id)
+            await self.cache.invalidate_recent_predictions()
+
         return PredictionRead.model_validate(prediction) if prediction else None

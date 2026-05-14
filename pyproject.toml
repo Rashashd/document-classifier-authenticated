@@ -30,16 +30,13 @@ dependencies = [
     # FastAPICache` raises ImportError. Tracking upstream — when
     # fastapi-cache2 stops touching starlette.templating, drop this.
     "jinja2>=3.1.0",
-
     # Queue (redis version is constrained by fastapi-cache2 to <5)
     "rq>=1.16.0",
     "redis>=4.2.0",
     # Storage
     "minio>=7.2.0",
-
     # SFTP client (used by app/infra/sftp.py)
     "paramiko>=3.4.0",
-
     # HTTP client (async — no requests/time.sleep)
     "httpx>=0.27.0",
     # Structured logging
