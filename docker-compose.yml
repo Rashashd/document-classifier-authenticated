@@ -38,17 +38,33 @@ services:
   vault-init:
     image: hashicorp/vault
     container_name: dc_vault_init
+    # One-shot. Seeds all three secrets the application reads at startup:
+    #   - secret/jwt    consumed by app/core/lifespan.py (JWT signing key)
+    #   - secret/sftp   consumed by app/workers/sftp_ingest.py (paramiko creds)
+    #   - secret/minio  consumed by app/workers/sftp_ingest.py (S3 creds)
+    # Single source of truth is .env on the host; this service mirrors those
+    # values into Vault so the application never reads passwords from env.
     entrypoint: >
-      sh -c "vault kv put -address=http://vault:8200 secret/jwt secret=dev-signing-key-change-in-prod"
+      sh -c "
+      vault kv put -address=http://vault:8200 secret/jwt   secret=dev-signing-key-change-in-prod &&
+      vault kv put -address=http://vault:8200 secret/sftp  username=$$SFTP_USER       password=$$SFTP_PASSWORD &&
+      vault kv put -address=http://vault:8200 secret/minio access_key=$$MINIO_ROOT_USER secret_key=$$MINIO_ROOT_PASSWORD
+      "
     environment:
-      VAULT_TOKEN: ${VAULT_TOKEN}
+      VAULT_TOKEN:         ${VAULT_TOKEN}
+      SFTP_USER:           ${SFTP_USER}
+      SFTP_PASSWORD:       ${SFTP_PASSWORD}
+      MINIO_ROOT_USER:     ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     depends_on:
       vault:
         condition: service_healthy
     restart: "no"
 
   migrate:
-    build: .
+    build:
+      context: .
+      target: runtime-core
     container_name: dc_migrate
     command: ["alembic", "upgrade", "head"]
     environment:
@@ -61,7 +77,9 @@ services:
     restart: "no"
 
   api:
-    build: .
+    build:
+      context: .
+      target: runtime-core
     container_name: dc_api
     command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
@@ -127,7 +145,9 @@ services:
     restart: unless-stopped
 
   worker-ingest:
-    build: .
+    build:
+      context: .
+      target: runtime-core
     container_name: dc_worker_ingest
     command: ["python", "-m", "app.workers.sftp_ingest"]
     environment:
@@ -146,6 +166,36 @@ services:
       redis:
         condition: service_healthy
       vault-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Inference worker. Same image as the ingest worker (model weights
+  # are baked into the image via `app/classifier/models/classifier.pt`,
+  # materialised by Git LFS at build time). depends_on `migrate` so we
+  # never write into a stale schema, and on `vault-init` so the MinIO
+  # creds are present in Vault before fetch_vault_secrets() runs.
+  worker-inference:
+    build:
+      context: .
+      target: runtime-ml
+    container_name: dc_worker_inference
+    command: ["python", "-m", "app.workers.inference"]
+    environment:
+      DATABASE_URL:   postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      VAULT_TOKEN:    ${VAULT_TOKEN}
+      VAULT_ADDR:     http://vault:8200
+      MINIO_ENDPOINT: minio:9000
+      REDIS_URL:      redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+      migrate:
         condition: service_completed_successfully
     restart: unless-stopped
 

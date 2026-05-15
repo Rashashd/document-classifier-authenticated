@@ -13,7 +13,7 @@ class DocumentLabel(str, Enum):
     letter = "letter"
     memo = "memo"
     email = "email"
-    filefolder = "filefolder"
+    file_folder = "file_folder"
     form = "form"
     handwritten = "handwritten"
     invoice = "invoice"
@@ -55,3 +55,11 @@ class PredictionUpdate(BaseModel):
 
     label: DocumentLabel | None = None
     overlay_path: str | None = None
+
+
+class PredictionListResponse(BaseModel):
+    """Paginated GET /predictions/recent envelope."""
+    items: list[PredictionRead]
+    total: int
+    skip: int
+    limit: int

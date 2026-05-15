@@ -82,5 +82,26 @@ class MinioBlobClient:
 
         return f"s3://{bucket}/{file_name}"
 
+    def download_file(self, file_name: str, *, bucket: str = DEFAULT_BUCKET) -> bytes:
+        """Read an object's full bytes. Symmetric with ``upload_file``.
+
+        S3Error propagates (per-request errors like NoSuchKey).
+        MaxRetryError (MinIO unreachable) → BlobUnavailableError.
+        """
+        try:
+            response = self._client.get_object(bucket, file_name)
+            try:
+                return response.read()
+            finally:
+                response.close()
+                response.release_conn()
+        except MaxRetryError as exc:
+            logger.exception(
+                "minio: connection failed downloading %r from %r", file_name, bucket
+            )
+            raise BlobUnavailableError(
+                f"MinIO download from s3://{bucket}/{file_name} failed: {exc}"
+            ) from exc
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"MinioBlobClient(endpoint={self._endpoint!r})"

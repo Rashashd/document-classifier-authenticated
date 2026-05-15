@@ -31,8 +31,28 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    # Job-level env: both the compose-up step (interpolates ${VAR})
+    # and the pytest step (test code reads os.environ.get) see the
+    # same values. If these only live on the compose step, pytest
+    # falls through to its defaults and auth-mismatches the running
+    # SFTP / MinIO containers.
+    env:
+      POSTGRES_USER:       postgres
+      POSTGRES_PASSWORD:   postgres
+      POSTGRES_DB:         app
+      MINIO_ROOT_USER:     admin
+      MINIO_ROOT_PASSWORD: password123
+      SFTP_USER:           scanner
+      SFTP_PASSWORD:       password123
+      VAULT_TOKEN:         ci-noop
     steps:
+      # ``lfs: true`` pulls the real classifier.pt + golden fixtures.
+      # Without it the runner would only get LFS pointer text files and
+      # both the golden eval and the full-stack smoke would fail at
+      # ``assert_classifier_artifacts()`` with a SHA-256 mismatch.
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,10 +70,9 @@ jobs:
         # e2e ingestion test imports as a fixture helper.
         run: uv pip install --system pytest pytest-asyncio pillow
 
-      # CI has no .env. Write only the fields that Settings declares
-      # (extra="forbid" rejects anything not in the model). Compose-only
-      # vars (POSTGRES_*, MINIO_*, SFTP_*) go on the compose step's env:
-      # so they never touch Pydantic Settings.
+      # CI has no .env. Settings has extra="ignore" (app/core/config.py)
+      # so unrelated vars in the env are harmless; we still write the
+      # two app-side required fields for explicitness.
       - name: Create .env for CI
         run: |
           cat > .env << 'EOF'
@@ -67,15 +86,7 @@ jobs:
       # service is deliberately NOT started here — the Phase-2 worker
       # requires Vault, which CI does not provision yet.
       - name: Start infra services
-        env:
-          POSTGRES_USER:     postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB:       app
-          MINIO_ROOT_USER:   admin
-          MINIO_ROOT_PASSWORD: password123
-          SFTP_USER:         scanner
-          SFTP_PASSWORD:     password123
-          VAULT_TOKEN:       ci-noop
+        # All credentials inherited from the job-level env block above.
         run: docker compose up -d db redis minio sftp
 
       - name: Wait for services to be healthy
@@ -100,18 +111,87 @@ jobs:
       # Port 5433: compose maps 5433→5432 to avoid conflicts with a
       # local Postgres on dev machines; CI has no local Postgres but
       # we keep the same port so compose config is identical everywhere.
+      # DATABASE_URL is step-local because it points at host:port
+      # (localhost:5433), which isn't a value compose itself ever needs
+      # — only the host-side alembic + pytest invocations.
       - name: Run database migrations
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
-          VAULT_TOKEN:  ci-noop
         run: alembic upgrade head
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/app
-          VAULT_TOKEN:  ci-noop
-        run: pytest tests/
+        run: pytest tests/ --ignore=tests/smoke
 
-      - name: Tear down infra services
+      # The golden eval needs the full PyTorch wheel + torchvision, plus
+      # the real classifier.pt from Git LFS. Excluded from the main
+      # pytest run above so an LFS regression surfaces as its own
+      # red step rather than getting buried.
+      - name: Install torch for golden eval
+        run: uv pip install --system "torch>=2.2.0" "torchvision>=0.17.0"
+
+      - name: Run golden-set regression check
+        run: python -m app.classifier.eval.golden
+
+      # Tear down before the full-stack pass so we boot the smoke test
+      # against a fully fresh stack (no test pollution in MinIO / db).
+      - name: Tear down infra services (pre-smoke)
+        if: always()
+        run: docker compose down -v
+
+      # ---- Full-stack smoke test ------------------------------------
+      # Boots EVERY compose service (api + both workers + vault-init
+      # + migrate), then exercises the production path:
+      # SFTP drop → worker-ingest → Redis → worker-inference → DB
+      # → cache invalidation → API. ``sleep 15`` is the cold-start
+      # budget: Postgres + Vault + the migration container + both
+      # workers loading torch. The smoke script polls /batches itself
+      # afterwards, so longer waits go inside the script.
+      - name: Boot full stack
+        run: docker compose up -d --build
+
+      # Poll /health instead of a flat sleep. The API container has a
+      # cold-start cost (SHA-256 over classifier.pt, FastAPICache redis
+      # ping, Vault round-trip, Casbin policy load) plus has to wait on
+      # vault-init + migrate to complete. 90 s is generous; the smoke
+      # itself has its own internal polling beyond that.
+      - name: Wait for API /health
+        run: |
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "api is up after ${i} attempts"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api never became reachable on :8000"
+          docker compose ps
+          exit 1
+
+      - name: Run full-stack smoke
+        run: python tests/smoke/test_full_stack.py
+
+      # Maximally noisy on failure: which containers exist (and their
+      # exit reason if dead), then the full logs of the three app
+      # services. --tail=200 is too aggressive when the crash is at
+      # boot — the relevant traceback is in the first ~50 lines.
+      - name: Dump compose state (on failure)
+        if: failure()
+        run: |
+          echo "=== docker compose ps ==="
+          docker compose ps --all
+          echo "=== api logs ==="
+          docker compose logs api
+          echo "=== worker-ingest logs ==="
+          docker compose logs worker-ingest
+          echo "=== worker-inference logs ==="
+          docker compose logs worker-inference
+          echo "=== migrate logs ==="
+          docker compose logs migrate
+          echo "=== vault-init logs ==="
+          docker compose logs vault-init
+
+      - name: Tear down full stack
         if: always()
         run: docker compose down -v

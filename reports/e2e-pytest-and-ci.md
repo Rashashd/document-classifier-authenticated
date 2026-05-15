@@ -153,3 +153,5 @@ twice in a row — second run also green).
    *deployed* worker against the live stack (vs the current pattern of
    importing `process_one` and driving it from inside the test). That
    would close the last gap between this test and a real smoke test.
+
+> **See also:** [vault-secrets-and-ci.md § Known limitations](vault-secrets-and-ci.md#known-limitations) — CI does not exercise the Vault → worker credential fetch path. The tests inject adapter credentials from env vars, so a shape mismatch in seeded Vault secrets or a broken worker→Vault network path would pass CI silently.

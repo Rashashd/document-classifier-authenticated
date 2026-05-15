@@ -29,12 +29,22 @@ class BatchRead(BatchBase):
 
     id: uuid.UUID
     status: BatchStatus
-    owner_id: uuid.UUID
+    # Nullable: scanner-originated batches have no JWT subject.
+    owner_id: uuid.UUID | None
     document_count: int
     created_at: datetime
     updated_at: datetime
 
 
 class BatchUpdate(BaseModel):
+    # ``document_count`` is a computed @property on the ORM model
+    # (len(predictions)) and therefore intentionally not updatable.
     status: BatchStatus | None = None
-    document_count: int | None = None
+
+
+class BatchListResponse(BaseModel):
+    """Paginated GET /batches envelope."""
+    items: list[BatchRead]
+    total: int
+    skip: int
+    limit: int

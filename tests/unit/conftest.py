@@ -6,10 +6,29 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi_cache import FastAPICache
 from typing import Annotated
 
 from app.api.deps import get_current_user, require_role
 from app.db.models import User
+
+
+@pytest.fixture(autouse=True)
+def _reset_fastapi_cache():
+    """Init FastAPICache with an in-memory backend for every unit test.
+
+    Sara's @cache decorators on /batches and /predictions/recent need
+    ``FastAPICache.get_prefix()`` to return non-None, or the request
+    handler asserts at import-time-but-late. The e2e integration test
+    can also leave a closed AsyncRedis behind in the singleton; resetting
+    then re-initialising clears that state.
+    """
+    from fastapi_cache.backends.inmemory import InMemoryBackend
+
+    FastAPICache.reset()
+    FastAPICache.init(InMemoryBackend(), prefix="unit-test")
+    yield
+    FastAPICache.reset()
 
 
 async def _raise_401():

@@ -34,6 +34,8 @@ this whole file exists.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from app.infra.blob  import MinioBlobClient
@@ -56,8 +58,8 @@ from app.infra.sftp  import SFTPClient
 
 # MinIO -----------------------------------------------------------------
 MINIO_ENDPOINT:   str = "localhost:9000"
-MINIO_ACCESS_KEY: str = "admin"
-MINIO_SECRET_KEY: str = "password123"
+MINIO_ACCESS_KEY: str = os.environ.get("MINIO_ROOT_USER", "admin")
+MINIO_SECRET_KEY: str = os.environ.get("MINIO_ROOT_PASSWORD", "change-me-in-production")
 
 # Redis (used by BOTH the RQ queue adapter AND the cache adapter — they
 # share a single Redis container; in production we separate by logical
@@ -67,8 +69,8 @@ REDIS_URL: str = "redis://localhost:6379/0"
 # SFTP ------------------------------------------------------------------
 SFTP_HOST:     str = "localhost"
 SFTP_PORT:     int = 2222   # host-side mapping; container listens on 22
-SFTP_USER:     str = "scanner"
-SFTP_PASSWORD: str = "password123"
+SFTP_USER:     str = os.environ.get("SFTP_USER", "scanner")
+SFTP_PASSWORD: str = os.environ.get("SFTP_PASSWORD", "change-me-in-production")
 
 # atmoz/sftp chroots the ``scanner`` user, so from inside the SFTP
 # session the upload directory appears at ``/upload`` — NOT at the

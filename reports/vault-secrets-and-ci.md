@@ -175,3 +175,37 @@ needs to update `docker-compose.yml` to:
 That compose change is intentionally out of scope of this commit — it
 belongs in the same PR that ships the dev-mode Vault container, which
 is Person D's territory.
+
+---
+
+## Known limitations
+
+**CI does not exercise the Vault → worker credential flow.** Integration
+tests build adapter clients (`MinioBlobClient`, `SFTPClient`) directly
+from job-level env vars (`MINIO_ROOT_USER`, `SFTP_PASSWORD`, etc.)
+rather than going through the worker's `fetch_vault_secrets()` →
+`build_*(creds)` path. Consequently, the following breakages would
+pass CI but fail on `docker compose up`:
+
+- Shape change in `secret/sftp` or `secret/minio` keys (e.g.
+  `username` → `user`).
+- Wrong KV mount path in `vault-init`.
+- Misconfigured `VAULT_ADDR` on the worker service.
+- Dropped `VAULT_TOKEN` env var on the worker service.
+
+These are caught only by manual `docker compose up` smoke tests today.
+
+**Closing the gap** requires (a) adding `vault` + `vault-init` to CI's
+`docker compose up` line, and (b) a small integration test asserting
+the seeded secret shapes match what `fetch_vault_secrets()` expects:
+
+```python
+# tests/integration/test_vault_seed_contract.py
+def test_vault_seeded_secrets_match_worker_expectations():
+    vault = VaultClient(addr=os.environ["VAULT_ADDR"],
+                        token=os.environ["VAULT_TOKEN"])
+    assert {"username", "password"}    <= vault.get_secret("sftp").keys()
+    assert {"access_key", "secret_key"} <= vault.get_secret("minio").keys()
+```
+
+Tracked in the API-E2E roadmap; not blocking the current milestone.

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Batch
@@ -18,7 +18,7 @@ class BatchRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_batch(self, sftp_path: str, owner_id: uuid.UUID) -> Batch:
+    async def create_batch(self, sftp_path: str, owner_id: uuid.UUID | None) -> Batch:
         """Insert a PENDING batch row and return the ORM model.
 
         Uses ``flush`` (not ``commit``) so the row's auto-generated
@@ -51,6 +51,30 @@ class BatchRepository:
         result = await self._session.execute(stmt)
         return result.scalars().all()
 
+    async def list_all(
+        self, skip: int = 0, limit: int = 100
+    ) -> tuple[Sequence[Batch], int]:
+        """Return every batch + a total count for pagination.
+
+        Owner-agnostic — scanner-ingested batches (owner_id=NULL) would
+        never match a ``WHERE owner_id = ?`` filter.
+        """
+        stmt = (
+            select(Batch)
+            .order_by(Batch.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        items = result.scalars().all()
+        total = await self._session.scalar(select(func.count()).select_from(Batch))
+        return items, total or 0
+
+    async def count_by_owner(self, owner_id: uuid.UUID) -> int:
+        stmt = select(func.count()).select_from(Batch).where(Batch.owner_id == owner_id)
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
+
     async def update_status(self, batch_id: uuid.UUID, status: BatchStatus) -> Batch | None:
         """Update only the status. Returns the updated object or None if not found."""
         stmt = update(Batch).where(Batch.id == batch_id).values(status=status).returning(Batch)
@@ -63,6 +87,14 @@ class BatchRepository:
         data = updates.model_dump(exclude_unset=True)
         if not data:
             return await self.get(batch_id)
+        
+        updatable_columns = {"sftp_path", "status", "owner_id"}  # add any other actual columns
+        filtered_data = {k: v for k, v in data.items() if k in updatable_columns}
+        
+        if not filtered_data:
+            # Nothing to update (e.g., only document_count provided)
+            return await self.get(batch_id)
+
         stmt = update(Batch).where(Batch.id == batch_id).values(**data).returning(Batch)
         result = await self._session.execute(stmt)
         await self._session.flush()

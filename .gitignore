@@ -36,17 +36,6 @@ venv.bak/
 .poetry/
 .uv/
 
-# ----- uv -----
-.uv/
-
-# ----- Distribution / packaging -----
-build/
-dist/
-*.egg-info/
-*.egg
-.eggs/
-.installed.cfg
-
 # ----- Testing & coverage -----
 .pytest_cache/
 .coverage
@@ -54,12 +43,10 @@ dist/
 htmlcov/
 .htmlcov/
 .cache
-.pytest_cache/
 coverage.xml
 .mypy_cache/
 .ruff_cache/
 .tox/
-.cache
 
 # ----- Alembic -----
 app/db/migrations/__pycache__/
@@ -74,6 +61,7 @@ app/db/migrations/__pycache__/
 Thumbs.db
 
 # ----- Secrets & local config -----
+# `.env.example` IS tracked; the real `.env` (Vault root token, ports) is not.
 .env
 .env.*
 !.env.example

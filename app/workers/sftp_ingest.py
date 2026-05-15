@@ -11,7 +11,6 @@ Run with ``python -m app.workers.sftp_ingest``.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import os.path
@@ -19,11 +18,13 @@ import posixpath
 import sys
 import time
 import uuid
+from datetime import datetime, timezone
 
 import paramiko
 import structlog
 from sqlalchemy import NullPool
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from app.domain.jobs import InferenceJob
 from app.infra.blob import MinioBlobClient
 from app.infra.exceptions import (
     BlobUnavailableError,
@@ -45,7 +46,7 @@ REMOTE_QUARANTINE_DIR: str = "/quarantine"
 TIFF_SUFFIXES: tuple[str, ...] = (".tiff", ".tif")
 TIFF_MAGIC_BYTES: tuple[bytes, ...] = (b"II*\x00", b"MM\x00*")
 QUEUE_NAME: str = "classification_queue"
-INFERENCE_FUNC_PATH: str = "app.workers.inference.run"
+INFERENCE_FUNC_PATH: str = "app.workers.inference.run_inference"
 
 
 # -- logging -----------------------------------------------------------------
@@ -244,15 +245,20 @@ def process_one(
     batch_id = str(batch_uuid)
     log.info("ingest.batch_persisted", batch_id=batch_id, minio_uri=minio_uri)
 
-    ticket: dict[str, str] = {
-        "batch_id": batch_id,
-        "minio_file_path": minio_uri,
-    }
+    # Build the canonical job payload defined in app.domain.jobs.
+    # blob_path is the MinIO object key (not the s3:// URI) — worker 2
+    # uses it directly with blob.download_file(key).
+    inference_job = InferenceJob(
+        batch_id=batch_uuid,
+        blob_path=safe_name,
+        filename=safe_name,
+        enqueued_at=datetime.now(timezone.utc),
+    )
     job_id = queue.enqueue_job(
         queue_name=QUEUE_NAME,
         payload={
             "func": INFERENCE_FUNC_PATH,
-            "kwargs": {"payload": json.dumps(ticket)},
+            "kwargs": {"payload": inference_job.model_dump_json()},
         },
     )
 
