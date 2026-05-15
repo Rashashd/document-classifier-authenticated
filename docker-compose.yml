@@ -169,6 +169,17 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+    container_name: dc_frontend
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
   # Inference worker. Same image as the ingest worker (model weights
   # are baked into the image via `app/classifier/models/classifier.pt`,
   # materialised by Git LFS at build time). depends_on `migrate` so we
