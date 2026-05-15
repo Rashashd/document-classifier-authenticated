@@ -5,12 +5,15 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.batch_repo import BatchRepository
 from app.domain.batch import BatchRead, BatchStatus, BatchUpdate
 from app.services.cache_service import CacheService
 from app.services.audit_service import AuditService
+
+logger = structlog.get_logger(__name__)
 
 
 class BatchService:
@@ -40,6 +43,7 @@ class BatchService:
         await self._session.commit()
         if self._cache and owner_id is not None:
             await self._cache.invalidate_user(owner_id)
+        logger.info("batch.created", batch_id=str(batch.id), sftp_path=sftp_path)
         return batch.id
 
     # New methods for Person B
@@ -73,7 +77,8 @@ class BatchService:
             await self._session.commit()
             if self._cache:
                 await self._cache.invalidate_batch(batch_id)
-                await self._cache.invalidate_user(batch.owner_id)
+                if batch.owner_id is not None:
+                    await self._cache.invalidate_user(batch.owner_id)
             if self._audit and actor_id:
                 await self._audit.log_event(
                     actor_id=actor_id,
@@ -81,6 +86,7 @@ class BatchService:
                     target=f"/batches/{batch_id}",
                     request_id=request_id,
                 )
+            logger.info("batch.status_changed", batch_id=str(batch_id), status=status.value)
         return BatchRead.model_validate(batch) if batch else None
 
     async def update_batch(
@@ -107,6 +113,7 @@ class BatchService:
             await self._session.commit()
             if self._cache:
                 await self._cache.invalidate_batch(batch_id)
-                await self._cache.invalidate_user(batch.owner_id)
-            
+                if batch.owner_id is not None:
+                    await self._cache.invalidate_user(batch.owner_id)
+            logger.info("batch.updated", batch_id=str(batch_id))
         return BatchRead.model_validate(batch) if batch else None

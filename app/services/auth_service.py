@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 
+import structlog
 from fastapi import Depends, Request
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
 from fastapi_users.authentication import (
@@ -14,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User
 from app.db.session import get_async_session
+
+logger = structlog.get_logger(__name__)
 
 
 # Database adapter
@@ -28,7 +31,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def on_after_register(
         self, user: User, request: Request | None = None
     ) -> None:
-        pass  # hook available for future audit logging
+        logger.info("user.registered", user_id=str(user.id), email=user.email)
 
 
 def _get_jwt_secret(request: Request) -> str:

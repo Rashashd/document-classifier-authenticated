@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import structlog
 from fastapi import Depends, HTTPException, Request, status
 
 from app.db.models import User
 from app.services.auth_service import fastapi_users
+
+logger = structlog.get_logger(__name__)
 
 # Resolves the bearer token and returns the current active user
 # Return a FastAPI dependency that enforces Casbin RBAC
@@ -23,6 +26,13 @@ def require_role(*roles: str):
         enforcer = request.app.state.enforcer
         allowed = any(enforcer.enforce(current_user.role, role) for role in roles)
         if not allowed:
+            logger.warning(
+                "access.denied",
+                user_id=str(current_user.id),
+                role=current_user.role,
+                required_roles=list(roles),
+                path=request.url.path,
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions.",
