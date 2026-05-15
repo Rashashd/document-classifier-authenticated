@@ -1,33 +1,24 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi_cache.decorator import cache
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, get_prediction_service, require_role
 from app.db.models import User
-from app.db.session import get_async_session
 from app.domain.prediction import PredictionListResponse, PredictionRead, PredictionUpdate
-from app.services.audit_service import AuditService
-from app.services.cache_service import CacheService
+from app.infra.blob import MinioBlobClient
+from app.infra.vault import VaultClient
 from app.services.prediction_service import PredictionService
+
+_OVERLAY_PREFIX = "s3://documents/"
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
-
-def get_audit_service(session: AsyncSession = Depends(get_async_session)) -> AuditService:
-    return AuditService(session)
-
-def get_prediction_service(
-    session: AsyncSession = Depends(get_async_session),
-    cache: CacheService = Depends(CacheService),
-    audit: AuditService = Depends(get_audit_service),
-) -> PredictionService:
-    return PredictionService(session, cache, audit)
 
 
 @router.get("/recent", response_model=PredictionListResponse)
@@ -68,7 +59,7 @@ async def relabel_prediction(
             detail="Cannot relabel predictions with confidence >= 0.7"
         )
     
-    request_id = request.headers.get("X-Request-ID")
+    request_id = getattr(request.state, "request_id", None)
     
     updated = await service.relabel_prediction(
         prediction_id=prediction_id,
@@ -80,3 +71,32 @@ async def relabel_prediction(
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found")
     return updated
+
+
+@router.get("/{prediction_id}/overlay")
+async def get_prediction_overlay(
+    prediction_id: uuid.UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    service: PredictionService = Depends(get_prediction_service),
+) -> Response:
+    """Proxy the overlay PNG from MinIO so the browser can display it with auth."""
+    pred = await service.get_prediction(prediction_id)
+    if not pred:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found")
+    if not pred.overlay_path or not pred.overlay_path.startswith(_OVERLAY_PREFIX):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Overlay not available")
+
+    object_key = pred.overlay_path[len(_OVERLAY_PREFIX):]
+
+    vault: VaultClient = request.app.state.vault
+    settings = request.app.state.settings
+    minio_creds: dict[str, Any] = vault.get_secret(settings.vault_minio_path)
+    blob = MinioBlobClient(
+        endpoint=settings.minio_endpoint,
+        access_key=minio_creds["access_key"],
+        secret_key=minio_creds["secret_key"],
+        secure=False,
+    )
+    image_bytes = blob.download_file(object_key)
+    return Response(content=image_bytes, media_type="image/png")

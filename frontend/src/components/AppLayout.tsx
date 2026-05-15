@@ -10,6 +10,7 @@ import {
   ClipboardList,
   LogOut,
   ScanLine,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,10 @@ export function AppLayout() {
           <NavLink to="/predictions" className={navLinkClass}>
             <FileText className="h-4 w-4" />
             Predictions
+          </NavLink>
+          <NavLink to="/demo" className={navLinkClass}>
+            <Play className="h-4 w-4" />
+            Demo
           </NavLink>
           {isAdmin && (
             <NavLink to="/users" className={navLinkClass}>

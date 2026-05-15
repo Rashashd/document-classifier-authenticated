@@ -5,29 +5,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_batch_service, get_current_user, require_role
 from app.db.session import get_async_session
-from app.db.models import User   # <-- changed
+from app.db.models import User
 from app.domain.batch import BatchRead, BatchUpdate, BatchListResponse
+from app.domain.prediction import PredictionListResponse, PredictionRead
+from app.repositories.prediction_repo import PredictionRepository
 from app.services.batch_service import BatchService
-from app.services.cache_service import CacheService
 from fastapi_cache.decorator import cache
-from app.services.audit_service import AuditService
 
 
 router = APIRouter(prefix="/batches", tags=["batches"])
-
-
-def get_audit_service(session: AsyncSession = Depends(get_async_session)) -> AuditService:
-    return AuditService(session)
-
-
-def get_batch_service(
-    session: AsyncSession = Depends(get_async_session),
-    cache: CacheService = Depends(CacheService),
-    audit: AuditService = Depends(get_audit_service),
-) -> BatchService:
-    return BatchService(session, cache, audit)
 
 
 @router.get("", response_model=BatchListResponse)
@@ -59,6 +47,18 @@ async def get_batch(
     return batch
 
 
+@router.get("/{batch_id}/predictions", response_model=PredictionListResponse)
+async def list_batch_predictions(
+    batch_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> PredictionListResponse:
+    """Return all predictions belonging to a batch."""
+    predictions = await PredictionRepository(session).get_by_batch(batch_id)
+    items = [PredictionRead.model_validate(p) for p in predictions]
+    return PredictionListResponse(items=items, total=len(items), skip=0, limit=len(items))
+
+
 @router.patch("/{batch_id}", response_model=BatchRead)
 async def update_batch(
     batch_id: uuid.UUID,
@@ -67,7 +67,7 @@ async def update_batch(
     current_user: User = Depends(require_role("admin")),
     service: BatchService = Depends(get_batch_service),
 ) -> BatchRead:
-    request_id = request.headers.get("X-Request-ID")
+    request_id = getattr(request.state, "request_id", None)
     updated = await service.update_batch(
         batch_id,
         updates,

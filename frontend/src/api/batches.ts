@@ -1,5 +1,5 @@
 import { apiGet, apiPatch } from "./client";
-import type { BatchListResponse, BatchRead, BatchUpdate } from "./types";
+import type { BatchListResponse, BatchRead, BatchUpdate, PredictionListResponse } from "./types";
 
 export async function listBatches(skip = 0, limit = 50): Promise<BatchListResponse> {
   return apiGet<BatchListResponse>(`/batches?skip=${skip}&limit=${limit}`);
@@ -7,6 +7,10 @@ export async function listBatches(skip = 0, limit = 50): Promise<BatchListRespon
 
 export async function getBatch(id: string): Promise<BatchRead> {
   return apiGet<BatchRead>(`/batches/${id}`);
+}
+
+export async function listBatchPredictions(batchId: string): Promise<PredictionListResponse> {
+  return apiGet<PredictionListResponse>(`/batches/${batchId}/predictions`);
 }
 
 export async function updateBatch(id: string, data: BatchUpdate): Promise<BatchRead> {

@@ -63,6 +63,24 @@ export async function apiGet<T>(path: string): Promise<T> {
   return apiFetch<T>(path, { method: "GET" });
 }
 
+export async function apiGetBlob(path: string): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers });
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem("access_token");
+      window.location.href = "/login?reason=session_expired";
+    }
+    const detail = await parseError(res);
+    throw new ApiClientError(res.status, detail);
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 export async function apiFormPost<T>(path: string, form: URLSearchParams): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {

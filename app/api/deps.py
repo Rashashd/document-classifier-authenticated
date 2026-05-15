@@ -4,15 +4,41 @@ from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User
+from app.db.session import get_async_session
+from app.services.audit_service import AuditService
 from app.services.auth_service import fastapi_users
+from app.services.batch_service import BatchService
+from app.services.cache_service import CacheService
+from app.services.prediction_service import PredictionService
 
 logger = structlog.get_logger(__name__)
 
 # Resolves the bearer token and returns the current active user
 # Return a FastAPI dependency that enforces Casbin RBAC
 get_current_user = fastapi_users.current_user(active=True)
+
+
+def get_audit_service(session: AsyncSession = Depends(get_async_session)) -> AuditService:
+    return AuditService(session)
+
+
+def get_batch_service(
+    session: AsyncSession = Depends(get_async_session),
+    cache: CacheService = Depends(CacheService),
+    audit: AuditService = Depends(get_audit_service),
+) -> BatchService:
+    return BatchService(session, cache, audit)
+
+
+def get_prediction_service(
+    session: AsyncSession = Depends(get_async_session),
+    cache: CacheService = Depends(CacheService),
+    audit: AuditService = Depends(get_audit_service),
+) -> PredictionService:
+    return PredictionService(session, cache, audit)
 
 
 def require_role(*roles: str) -> Callable[..., Awaitable[User]]:
