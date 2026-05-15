@@ -43,6 +43,16 @@ class Settings(BaseSettings):
         description="Redis URL used by fastapi-cache2 and RQ",
     )
 
+    # MinIO (used by demo endpoint; workers read from env directly)
+    vault_minio_path: str = Field(
+        default="minio",
+        description="Vault KV v2 mount-relative path for MinIO credentials",
+    )
+    minio_endpoint: str = Field(
+        default="minio:9000",
+        description="MinIO endpoint (host:port)",
+    )
+
     # App
     app_title: str = "Document Classifier"
     app_version: str = "0.1.0"

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { listRecentPredictions, updatePrediction } from "@/api/predictions";
+import { useCallback, useEffect, useState } from "react";
+import { getOverlayUrl, listRecentPredictions, updatePrediction } from "@/api/predictions";
 import type { DocumentLabel, PredictionRead } from "@/api/types";
 import { DOCUMENT_LABELS } from "@/api/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,27 +41,43 @@ export function PredictionsPage() {
   const [relabelTarget, setRelabelTarget] = useState<PredictionRead | null>(null);
   const [newLabel, setNewLabel] = useState<DocumentLabel | "">("");
   const [isSaving, setIsSaving] = useState(false);
+  const [overlayUrl, setOverlayUrl] = useState<string | null>(null);
 
   const isReviewer = user?.role === "reviewer" || user?.role === "admin";
 
-  const fetchPredictions = async () => {
-    setIsLoading(true);
+  const fetchPredictions = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const res = await listRecentPredictions(0, 100);
       setPredictions(res.items);
       setTotal(res.total);
     } catch {
-      toast({ variant: "destructive", title: "Failed to load predictions." });
+      if (!silent) toast({ variant: "destructive", title: "Failed to load predictions." });
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { fetchPredictions(); }, []);
+  useEffect(() => { fetchPredictions(); }, [fetchPredictions]);
+
+  useEffect(() => {
+    const id = setInterval(() => fetchPredictions(true), 5000);
+    return () => clearInterval(id);
+  }, [fetchPredictions]);
 
   const openRelabel = (p: PredictionRead) => {
     setRelabelTarget(p);
     setNewLabel(p.label);
+    setOverlayUrl(null);
+    if (p.overlay_path) {
+      getOverlayUrl(p.id).then(setOverlayUrl).catch(() => {});
+    }
+  };
+
+  const closeRelabel = () => {
+    if (overlayUrl) URL.revokeObjectURL(overlayUrl);
+    setOverlayUrl(null);
+    setRelabelTarget(null);
   };
 
   const handleRelabel = async () => {
@@ -71,7 +87,7 @@ export function PredictionsPage() {
       const updated = await updatePrediction(relabelTarget.id, { label: newLabel });
       setPredictions((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       toast({ title: "Prediction relabelled." });
-      setRelabelTarget(null);
+      closeRelabel();
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.detail : "Relabel failed.";
       toast({ variant: "destructive", title: msg });
@@ -87,7 +103,7 @@ export function PredictionsPage() {
           <h1 className="text-2xl font-semibold">Predictions</h1>
           <p className="text-sm text-muted-foreground">{total} total</p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchPredictions} disabled={isLoading}>
+        <Button variant="outline" size="sm" onClick={() => fetchPredictions()} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
@@ -162,13 +178,26 @@ export function PredictionsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!relabelTarget} onOpenChange={(open) => { if (!open) setRelabelTarget(null); }}>
-        <DialogContent>
+      <Dialog open={!!relabelTarget} onOpenChange={(open) => { if (!open) closeRelabel(); }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Relabel Prediction</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground font-mono">{relabelTarget?.filename}</p>
+
+            {overlayUrl ? (
+              <img
+                src={overlayUrl}
+                alt="Document overlay"
+                className="w-full rounded border object-contain max-h-64"
+              />
+            ) : relabelTarget?.overlay_path ? (
+              <div className="w-full h-32 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                Loading preview…
+              </div>
+            ) : null}
+
             <p className="text-sm">
               Current label:{" "}
               <span className="font-medium capitalize">
@@ -190,7 +219,7 @@ export function PredictionsPage() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRelabelTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={closeRelabel}>Cancel</Button>
             <Button onClick={handleRelabel} disabled={isSaving || !newLabel}>
               {isSaving ? "Saving…" : "Save"}
             </Button>

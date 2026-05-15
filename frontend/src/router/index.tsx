@@ -8,6 +8,7 @@ import { BatchDetailPage } from "@/pages/BatchDetailPage";
 import { PredictionsPage } from "@/pages/PredictionsPage";
 import { UsersPage } from "@/pages/UsersPage";
 import { AuditPage } from "@/pages/AuditPage";
+import { DemoPage } from "@/pages/DemoPage";
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +55,10 @@ export const router = createBrowserRouter([
             <AuditPage />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: "demo",
+        element: <DemoPage />,
       },
     ],
   },

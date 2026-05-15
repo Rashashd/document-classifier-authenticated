@@ -9,6 +9,8 @@ from app.api.deps import get_current_user, require_role
 from app.db.session import get_async_session
 from app.db.models import User   # <-- changed
 from app.domain.batch import BatchRead, BatchUpdate, BatchListResponse
+from app.domain.prediction import PredictionListResponse, PredictionRead
+from app.repositories.prediction_repo import PredictionRepository
 from app.services.batch_service import BatchService
 from app.services.cache_service import CacheService
 from fastapi_cache.decorator import cache
@@ -57,6 +59,18 @@ async def get_batch(
     if not batch:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Batch not found")
     return batch
+
+
+@router.get("/{batch_id}/predictions", response_model=PredictionListResponse)
+async def list_batch_predictions(
+    batch_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> PredictionListResponse:
+    """Return all predictions belonging to a batch."""
+    predictions = await PredictionRepository(session).get_by_batch(batch_id)
+    items = [PredictionRead.model_validate(p) for p in predictions]
+    return PredictionListResponse(items=items, total=len(items), skip=0, limit=len(items))
 
 
 @router.patch("/{batch_id}", response_model=BatchRead)

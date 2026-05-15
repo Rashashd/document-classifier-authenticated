@@ -1,4 +1,4 @@
-import { apiGet, apiPatch } from "./client";
+import { apiGet, apiGetBlob, apiPatch } from "./client";
 import type { PredictionListResponse, PredictionRead, PredictionUpdate } from "./types";
 
 export async function listRecentPredictions(skip = 0, limit = 50): Promise<PredictionListResponse> {
@@ -10,4 +10,8 @@ export async function updatePrediction(
   data: PredictionUpdate
 ): Promise<PredictionRead> {
   return apiPatch<PredictionRead>(`/predictions/${id}`, data);
+}
+
+export async function getOverlayUrl(predictionId: string): Promise<string> {
+  return apiGetBlob(`/predictions/${predictionId}/overlay`);
 }
