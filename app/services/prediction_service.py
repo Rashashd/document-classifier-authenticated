@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.batch import BatchStatus
@@ -19,6 +20,8 @@ from app.repositories.batch_repo import BatchRepository
 from app.repositories.prediction_repo import PredictionRepository
 from app.services.audit_service import AuditService
 from app.services.cache_service import CacheService
+
+logger = structlog.get_logger(__name__)
 
 
 class PredictionService:
@@ -45,7 +48,7 @@ class PredictionService:
 
         await self.cache.invalidate_batch(prediction_data.batch_id)
         await self.cache.invalidate_recent_predictions()
-
+        logger.info("prediction.saved", prediction_id=str(prediction.id), batch_id=str(prediction_data.batch_id))
         return PredictionRead.model_validate(prediction)
 
     async def save_prediction_and_complete_batch(
@@ -66,7 +69,7 @@ class PredictionService:
 
         await self.cache.invalidate_batch(prediction_data.batch_id)
         await self.cache.invalidate_recent_predictions()
-
+        logger.info("prediction.saved_batch_done", prediction_id=str(prediction.id), batch_id=str(prediction_data.batch_id))
         return PredictionRead.model_validate(prediction)
 
     async def get_prediction(self, prediction_id: uuid.UUID) -> PredictionRead | None:
@@ -99,5 +102,5 @@ class PredictionService:
 
             await self.cache.invalidate_batch(prediction.batch_id)
             await self.cache.invalidate_recent_predictions()
-
+            logger.info("prediction.relabeled", prediction_id=str(prediction_id), actor_id=str(actor_id), new_label=str(updates.label))
         return PredictionRead.model_validate(prediction) if prediction else None

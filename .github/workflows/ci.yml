@@ -24,10 +24,13 @@ jobs:
         run: uv pip install --system .
 
       - name: Install lint tooling
-        run: uv pip install --system ruff
+        run: uv pip install --system ruff mypy
 
       - name: Ruff
         run: ruff check app/
+
+      - name: Type check
+        run: mypy app/ --ignore-missing-imports --explicit-package-bases
 
   test:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./client";
+import { apiFetch, apiGet } from "./client";
 import type { UserRead, UserRole } from "./types";
 
 export async function listUsers(): Promise<UserRead[]> {
@@ -6,5 +6,5 @@ export async function listUsers(): Promise<UserRead[]> {
 }
 
 export async function setUserRole(userId: string, role: UserRole): Promise<UserRead> {
-  return apiPost<UserRead>(`/users/admin/${userId}/role`, { role });
+  return apiFetch<UserRead>(`/users/admin/${userId}/role?role=${role}`, { method: "POST" });
 }

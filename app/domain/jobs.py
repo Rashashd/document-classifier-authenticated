@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +25,7 @@ class InferenceJob(BaseModel):
     )
 
     # Serialisation helpers used by both workers
-    def to_rq_kwargs(self) -> dict:
+    def to_rq_kwargs(self) -> dict[str, Any]:
         """Pass as **job.to_rq_kwargs() to q.enqueue()."""
         return {"kwargs": {"payload": self.model_dump_json()}}
 

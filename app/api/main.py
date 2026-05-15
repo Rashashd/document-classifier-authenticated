@@ -10,6 +10,9 @@ from app.api.routers.predictions import router as predictions_router
 from app.api.routers.users import router as users_router
 from app.core.config import get_settings
 from app.core.lifespan import lifespan
+from app.core.logging import RequestIDMiddleware, configure_logging
+
+configure_logging()
 
 
 def create_app() -> FastAPI:
@@ -19,6 +22,7 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         lifespan=lifespan,
     )
+    app.add_middleware(RequestIDMiddleware)
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(users_router)

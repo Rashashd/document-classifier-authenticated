@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import hvac
 
 
@@ -9,7 +11,7 @@ class VaultClient:
     def __init__(self, addr: str, token: str) -> None:
         self._client = hvac.Client(url=addr, token=token)
 
-    def get_secret(self, path: str) -> dict:
+    def get_secret(self, path: str) -> dict[str, Any]:
         """
         Args: Mount-relative path, 'jwt' for the secret at 'secret/data/jwt'
         Returns: The 'data' dict from the KV v2 response
@@ -19,7 +21,7 @@ class VaultClient:
                 path=path,
                 raise_on_deleted_version=True,
             )
-            return response["data"]["data"]
+            return response["data"]["data"]  # type: ignore[no-any-return]
         except Exception as exc:
             raise RuntimeError(
                 f"Vault secret read failed for path '{path}': {exc}"

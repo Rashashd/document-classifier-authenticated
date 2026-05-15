@@ -39,6 +39,10 @@ export async function apiFetch<T>(
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem("access_token");
+      window.location.href = "/login?reason=session_expired";
+    }
     const detail = await parseError(res);
     throw new ApiClientError(res.status, detail);
   }

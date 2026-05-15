@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import casbin
@@ -22,7 +23,7 @@ logger = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     app.state.settings = settings
 

@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import uuid
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_role
-from app.db.session import get_async_session
-from app.domain.prediction import PredictionRead, PredictionUpdate, PredictionListResponse
 from app.db.models import User
-from app.services.prediction_service import PredictionService
-from app.services.cache_service import CacheService
-from fastapi_cache.decorator import cache
+from app.db.session import get_async_session
+from app.domain.prediction import PredictionListResponse, PredictionRead, PredictionUpdate
 from app.services.audit_service import AuditService
+from app.services.cache_service import CacheService
+from app.services.prediction_service import PredictionService
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
 
@@ -54,6 +57,12 @@ async def relabel_prediction(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prediction not found")
     
     if pred.confidence >= 0.7:
+        logger.warning(
+            "prediction.relabel_blocked",
+            prediction_id=str(prediction_id),
+            confidence=pred.confidence,
+            actor_id=str(current_user.id),
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot relabel predictions with confidence >= 0.7"

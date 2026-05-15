@@ -19,6 +19,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 import paramiko
 import structlog
@@ -59,7 +60,7 @@ def configure_logging() -> None:
     ``filename`` across every log line emitted during a file's
     processing, including stdlib logs from the infra adapters.
     """
-    shared_processors: list = [
+    shared_processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
@@ -95,7 +96,7 @@ log = structlog.get_logger("sftp_ingest")
 # -- secrets ----------------------------------------------------------------
 
 
-def fetch_vault_secrets() -> tuple[dict, dict]:
+def fetch_vault_secrets() -> tuple[dict[str, Any], dict[str, Any]]:
     """Read SFTP and MinIO credential dicts from Vault. Exits the process on failure.
 
     The worker is a standalone Python process — it does NOT share the
@@ -133,7 +134,7 @@ def fetch_vault_secrets() -> tuple[dict, dict]:
 # -- factories ---------------------------------------------------------------
 
 
-def build_sftp(creds: dict) -> SFTPClient:
+def build_sftp(creds: dict[str, Any]) -> SFTPClient:
     return SFTPClient(
         host=os.environ.get("SFTP_HOST", "sftp"),
         port=int(os.environ.get("SFTP_PORT", "22")),
@@ -142,7 +143,7 @@ def build_sftp(creds: dict) -> SFTPClient:
     )
 
 
-def build_blob(creds: dict) -> MinioBlobClient:
+def build_blob(creds: dict[str, Any]) -> MinioBlobClient:
     return MinioBlobClient(
         endpoint=os.environ.get("MINIO_ENDPOINT", "minio:9000"),
         access_key=creds["access_key"],

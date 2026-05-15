@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,8 @@ from app.db.session import get_async_session
 from app.domain.user import UserRead, UserRole
 from app.repositories.user_repo import UserRepository
 from app.services.audit_service import AuditService
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -55,4 +58,5 @@ async def set_user_role(
         target=f"/users/{user_id}/role",
     )
     await session.commit()
+    logger.info("user.role_changed", target_user_id=str(user_id), new_role=role, actor_id=str(current_user.id))
     return updated

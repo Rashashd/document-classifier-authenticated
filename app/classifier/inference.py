@@ -9,10 +9,11 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from collections.abc import Callable
 from functools import lru_cache, wraps
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from PIL import Image
 
@@ -54,7 +55,7 @@ def sha256_file(path: Path) -> str:
 
 def load_model_card(path: Path = DEFAULT_MODEL_CARD_PATH) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 def _model_card_sha256(model_card: dict[str, Any]) -> str | None:
@@ -109,7 +110,7 @@ def assert_classifier_artifacts(
             )
 
 
-def _import_torchvision():
+def _import_torchvision() -> tuple[Any, Any, Any]:
     import torch
     from torchvision import transforms
     from torchvision.models import convnext_tiny
@@ -117,7 +118,7 @@ def _import_torchvision():
     return torch, transforms, convnext_tiny
 
 
-def _build_convnext_tiny(num_classes: int):
+def _build_convnext_tiny(num_classes: int) -> Any:
     torch, _transforms, convnext_tiny = _import_torchvision()
     model = convnext_tiny(weights=None)
     in_features = model.classifier[2].in_features
@@ -125,15 +126,18 @@ def _build_convnext_tiny(num_classes: int):
     return model
 
 
-def self_no_grad(func):
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def self_no_grad(func: _F) -> _F:
     """Decorator using the classifier instance's torch.no_grad context."""
 
     @wraps(func)
-    def wrapper(self: "RVLCDIPClassifier", *args, **kwargs):
+    def wrapper(self: "RVLCDIPClassifier", *args: Any, **kwargs: Any) -> Any:
         with self.torch.no_grad():
             return func(self, *args, **kwargs)
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]
 
 
 class RVLCDIPClassifier:
