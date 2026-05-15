@@ -6,6 +6,7 @@ SUBMISSION FORMAT
   Backbone: convnext_tiny + ConvNeXt_Tiny_Weights.DEFAULT
 Freeze policy: linear probe then partial unfreeze
 Test top-1: 72.61% | Top-5: 93.88% | Worst-class: 45.76% (scientific_report)
-Latency p95: api-uncached= 11ms, inference= 105ms, e2e= 20.5ms
+Latency p95: api-uncached= 16ms, api-cached= 15ms, inference= 4.5s, e2e= 6.7s.
+Note: inference >1s, that's CPU-only ConvNeXt on Docker Desktop Window, on Linux with GPU it would hit <1s.
 
 README contains: ARCH.md, DECISIONS.md, RUNBOOK.md, SECURITY.md, COLLABORATION.md
