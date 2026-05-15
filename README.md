@@ -1,6 +1,6 @@
 # Document Classifier — Authenticated Service
 
-**Week 6 · AIE Bootcamp · Group 4**
+**Week 6 · AIE Bootcamp · Group 1**
 
 A document classification pipeline secured as an authenticated service. TIFF scans arrive over SFTP, a ConvNeXt Tiny model classifies them into 16 RVL-CDIP categories, and results are served through a role-gated REST API (FastAPI + Casbin RBAC) with a React frontend.
 
