@@ -10,13 +10,13 @@ class CacheService:
     """Lazy cache service – only initializes backend when needed."""
 
     def __init__(self) -> None:
-        self._backend = None
+        self._backend: RedisBackend | None = None
 
     @property
     def backend(self) -> RedisBackend | None:
         if self._backend is None:
             try:
-                self._backend = FastAPICache.get_backend()
+                self._backend = FastAPICache.get_backend()  # type: ignore[assignment]
             except AssertionError:
                 # FastAPICache.init() not called – cache disabled
                 return None

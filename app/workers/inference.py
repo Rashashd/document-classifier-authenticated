@@ -17,7 +17,7 @@ import os
 import sys
 from io import BytesIO
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import structlog
 from PIL import Image, ImageDraw, ImageFont
@@ -56,7 +56,7 @@ QUEUE_NAME = os.environ.get("INFERENCE_QUEUE", "classification_queue")
 # -- secrets bootstrap -------------------------------------------------------
 
 
-def fetch_vault_secrets() -> dict:
+def fetch_vault_secrets() -> dict[str, Any]:
     """Fetch MinIO credentials from Vault. Exit on failure."""
     addr = os.environ.get("VAULT_ADDR", "http://vault:8200")
     token = os.environ.get("VAULT_TOKEN")
@@ -78,7 +78,7 @@ def fetch_vault_secrets() -> dict:
 # -- factories ---------------------------------------------------------------
 
 
-def build_blob(minio_creds: dict) -> MinioBlobClient:
+def build_blob(minio_creds: dict[str, Any]) -> MinioBlobClient:
     return MinioBlobClient(
         endpoint=os.environ.get("MINIO_ENDPOINT", "minio:9000"),
         access_key=minio_creds["access_key"],
@@ -185,7 +185,7 @@ def run_inference(
     engine: AsyncEngine | None = None,
     redis_url: str | None = None,
     classify: ClassifyFn | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """RQ-callable inference entrypoint.
 
     ``payload`` is ``InferenceJob.model_dump_json()``. The keyword
@@ -256,7 +256,7 @@ __all__ = ["run_inference", "run_classification", "create_overlay_png", "main"]
 
 def configure_logging() -> None:
     """Route stdlib + structlog through a JSON renderer (matches sftp_ingest)."""
-    shared = [
+    shared: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),

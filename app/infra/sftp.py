@@ -92,7 +92,7 @@ class SFTPClient:
         self.connect()
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: object | None) -> None:
         self.close()
 
     # -- primitives -----------------------------------------------------------
@@ -101,7 +101,7 @@ class SFTPClient:
         """Basenames in ``remote_dir``. Empty list if the directory is missing."""
         self._require_session()
         try:
-            return self._sftp.listdir(remote_dir)  # type: ignore[union-attr]
+            return self._sftp.listdir(remote_dir)  # type: ignore[union-attr, no-any-return]
         except FileNotFoundError:
             logger.warning("sftp: remote_dir %r not found", remote_dir)
             return []
@@ -109,20 +109,20 @@ class SFTPClient:
     def size_of(self, remote_path: str) -> int:
         """Return the size of ``remote_path`` in bytes."""
         self._require_session()
-        return self._sftp.stat(remote_path).st_size  # type: ignore[union-attr,return-value]
+        return self._sftp.stat(remote_path).st_size  # type: ignore[union-attr, no-any-return]
 
     def read_partial(self, remote_path: str, n_bytes: int) -> bytes:
         """Return the first ``n_bytes`` of ``remote_path``."""
         self._require_session()
         with self._sftp.open(remote_path, mode="rb") as handle:  # type: ignore[union-attr]
-            return handle.read(n_bytes)
+            return handle.read(n_bytes)  # type: ignore[no-any-return]
 
     def read_file(self, remote_path: str) -> bytes:
         """Return the full bytes of ``remote_path``."""
         self._require_session()
         with self._sftp.open(remote_path, mode="rb") as handle:  # type: ignore[union-attr]
             handle.set_pipelined(True)
-            return handle.read()
+            return handle.read()  # type: ignore[no-any-return]
 
     def delete_file(self, remote_path: str) -> None:
         """Remove ``remote_path`` from the server."""

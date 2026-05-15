@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import structlog
 from fastapi import Depends, Request
@@ -20,12 +22,12 @@ logger = structlog.get_logger(__name__)
 
 
 # Database adapter
-async def get_user_db(session: AsyncSession = Depends(get_async_session)):
+async def get_user_db(session: AsyncSession = Depends(get_async_session)) -> AsyncGenerator[Any, None]:
     yield SQLAlchemyUserDatabase(session, User)
 
 
 # User manager
-class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
+class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):  # type: ignore[type-var]
     """Thin user manager. JWT secret is injected at startup via app.state."""
 
     async def on_after_register(
@@ -35,13 +37,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
 
 def _get_jwt_secret(request: Request) -> str:
-    return request.app.state.jwt_secret
+    return request.app.state.jwt_secret  # type: ignore[no-any-return]
 
 
 async def get_user_manager(
     request: Request,
-    user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
-):
+    user_db: SQLAlchemyUserDatabase[User, uuid.UUID] = Depends(get_user_db),  # type: ignore[type-var]
+) -> AsyncGenerator[Any, None]:
     manager = UserManager(user_db)
     manager.reset_password_token_secret = _get_jwt_secret(request)
     manager.verification_token_secret = _get_jwt_secret(request)
@@ -51,7 +53,7 @@ async def get_user_manager(
 # JWT strategy (secret resolved from app.state at runtime)
 
 
-def get_jwt_strategy(request: Request) -> JWTStrategy:
+def get_jwt_strategy(request: Request) -> JWTStrategy[User, uuid.UUID]:  # type: ignore[type-var]
     return JWTStrategy(
         secret=_get_jwt_secret(request),
         lifetime_seconds=request.app.state.settings.jwt_access_token_expire_minutes
@@ -62,10 +64,10 @@ def get_jwt_strategy(request: Request) -> JWTStrategy:
 
 bearer_transport = BearerTransport(tokenUrl="/auth/login")
 
-auth_backend = AuthenticationBackend(
+auth_backend = AuthenticationBackend(  # type: ignore[type-var]
     name="jwt",
     transport=bearer_transport,
-    get_strategy=get_jwt_strategy,  # type: ignore[arg-type]
+    get_strategy=get_jwt_strategy,
 )
 
-fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
+fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])  # type: ignore[type-var]

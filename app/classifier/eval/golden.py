@@ -24,7 +24,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 import pytest
 
@@ -69,7 +69,7 @@ class GoldenRegression:
         return "; ".join(problems)
 
 
-def _load_expected() -> list[dict]:
+def _load_expected() -> list[dict[str, Any]]:
     with open(GOLDEN_EXPECTED_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list):
@@ -78,7 +78,7 @@ def _load_expected() -> list[dict]:
 
 
 def _evaluate(
-    classifier: RVLCDIPClassifier, fixtures: Iterable[dict]
+    classifier: RVLCDIPClassifier, fixtures: Iterable[dict[str, Any]]
 ) -> list[GoldenRegression]:
     """Run inference per fixture, return one Regression-row per image.
 

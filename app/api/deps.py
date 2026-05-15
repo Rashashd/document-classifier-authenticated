@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+
 import structlog
 from fastapi import Depends, HTTPException, Request, status
 
@@ -13,7 +15,7 @@ logger = structlog.get_logger(__name__)
 get_current_user = fastapi_users.current_user(active=True)
 
 
-def require_role(*roles: str):
+def require_role(*roles: str) -> Callable[..., Awaitable[User]]:
     """
     Raises 401 if no valid token is present (via get_current_user).
     Raises 403 if the authenticated user's role is not permitted.
