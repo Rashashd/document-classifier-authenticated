@@ -67,7 +67,7 @@ async def update_batch(
     current_user: User = Depends(require_role("admin")),
     service: BatchService = Depends(get_batch_service),
 ) -> BatchRead:
-    request_id = request.headers.get("X-Request-ID")
+    request_id = getattr(request.state, "request_id", None)
     updated = await service.update_batch(
         batch_id,
         updates,

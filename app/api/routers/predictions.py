@@ -59,7 +59,7 @@ async def relabel_prediction(
             detail="Cannot relabel predictions with confidence >= 0.7"
         )
     
-    request_id = request.headers.get("X-Request-ID")
+    request_id = getattr(request.state, "request_id", None)
     
     updated = await service.relabel_prediction(
         prediction_id=prediction_id,
