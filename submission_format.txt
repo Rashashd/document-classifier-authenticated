@@ -1,0 +1,11 @@
+SUBMISSION FORMAT
+  Project 6, Mahdi Al Zein, Ali Asfahani, Sarah Shawraba, Racha Chamseddine
+  Repo: https://github.com/Rashashd/document-classifier-authenticated
+  Trello: https://trello.com/b/HfVFUhDk/sef-project-6
+  Tag: v0.1.0-week6
+  Backbone: convnext_tiny + ConvNeXt_Tiny_Weights.DEFAULT
+Freeze policy: linear probe then partial unfreeze
+Test top-1: 72.61% | Top-5: 93.88% | Worst-class: 45.76% (scientific_report)
+Latency p95: api-uncached= 11ms, inference= 105ms, e2e= 20.5ms
+
+README contains: ARCH.md, DECISIONS.md, RUNBOOK.md, SECURITY.md, COLLABORATION.md
