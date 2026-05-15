@@ -1,7 +1,4 @@
-"""Model loading and visual-layout inference for the RVL-CDIP classifier.
-
-This module deliberately has no FastAPI, database, Redis, or MinIO imports.
-It owns only model artifact validation, image preprocessing, and prediction.
+"""Model loading and visual-layout inference for the RVL-CDIP classifier. It owns only model artifact validation, image preprocessing, and prediction.
 """
 
 from __future__ import annotations
@@ -79,8 +76,7 @@ def assert_classifier_artifacts(
 ) -> None:
     """Validate artifact presence, SHA-256, and optional accuracy threshold.
 
-    The API and worker can call this during startup to satisfy the "refuse to
-    boot" requirement from the project brief.
+    The API and worker can call this during startup to satisfy the "refuse to boot" requirement from the project brief.
     """
 
     if not artifacts.model_path.is_file():
@@ -130,11 +126,14 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 
 def self_no_grad(func: _F) -> _F:
-    """Decorator using the classifier instance's torch.no_grad context."""
+    """Decorator that disables gradient tracking during inference.
+
+    Uses inference_mode (superset of no_grad: also disables view tracking) which is measurably faster on CPU than no_grad alone.
+    """
 
     @wraps(func)
     def wrapper(self: "RVLCDIPClassifier", *args: Any, **kwargs: Any) -> Any:
-        with self.torch.no_grad():
+        with self.torch.inference_mode():
             return func(self, *args, **kwargs)
 
     return wrapper  # type: ignore[return-value]
