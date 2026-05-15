@@ -106,7 +106,7 @@ Full validation report, raw output, and bugs caught during testing: [final_testi
 | File | Contents |
 |------|----------|
 | [ARCH.md](readme/ARCH.md) | System architecture, data models, workers, classifier, dataset notices |
-| [DECISIONS.md](DECISIONS.md) | Decision log — every team member's key choices with reasoning |
+| [DECISIONS.md](readme/DECISIONS.md) | Decision log — every team member's key choices with reasoning |
 | [SECURITY.md](readme/SECURITY.md) | Vault setup, JWT lifecycle, role table, audit log schema, secrets discipline |
 | [RUNBOOK.md](readme/RUNBOOK.md) | Startup, teardown, test commands, port reference, failure recovery |
 | [COLLABORATION.md](readme/COLLABORATION.md) | Team ownership, layer rules, git workflow, PR process, review checklist |

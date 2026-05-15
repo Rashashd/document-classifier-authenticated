@@ -1,7 +1,6 @@
 """Demo pipeline endpoint.
 
-Lets the frontend inject a real RVL-CDIP sample document directly into the
-classification pipeline without needing SFTP access. Useful for live demos.
+Lets the frontend inject a real RVL-CDIP sample document directly into the classification pipeline without needing SFTP access. Useful for live demos.
 Endpoints are auth-gated (any active user) but not role-restricted.
 """
 
