@@ -121,3 +121,5 @@ frontend/.next/
 # ----- Local -----
 plan/
 CLAUDE.md
+.claude/
+reports/
