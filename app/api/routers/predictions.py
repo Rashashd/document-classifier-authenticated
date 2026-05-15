@@ -6,16 +6,12 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi_cache.decorator import cache
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, get_prediction_service, require_role
 from app.db.models import User
-from app.db.session import get_async_session
 from app.domain.prediction import PredictionListResponse, PredictionRead, PredictionUpdate
 from app.infra.blob import MinioBlobClient
 from app.infra.vault import VaultClient
-from app.services.audit_service import AuditService
-from app.services.cache_service import CacheService
 from app.services.prediction_service import PredictionService
 
 _OVERLAY_PREFIX = "s3://documents/"
@@ -23,16 +19,6 @@ _OVERLAY_PREFIX = "s3://documents/"
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
-
-def get_audit_service(session: AsyncSession = Depends(get_async_session)) -> AuditService:
-    return AuditService(session)
-
-def get_prediction_service(
-    session: AsyncSession = Depends(get_async_session),
-    cache: CacheService = Depends(CacheService),
-    audit: AuditService = Depends(get_audit_service),
-) -> PredictionService:
-    return PredictionService(session, cache, audit)
 
 
 @router.get("/recent", response_model=PredictionListResponse)

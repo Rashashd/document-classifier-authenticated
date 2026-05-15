@@ -5,31 +5,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_batch_service, get_current_user, require_role
 from app.db.session import get_async_session
-from app.db.models import User   # <-- changed
+from app.db.models import User
 from app.domain.batch import BatchRead, BatchUpdate, BatchListResponse
 from app.domain.prediction import PredictionListResponse, PredictionRead
 from app.repositories.prediction_repo import PredictionRepository
 from app.services.batch_service import BatchService
-from app.services.cache_service import CacheService
 from fastapi_cache.decorator import cache
-from app.services.audit_service import AuditService
 
 
 router = APIRouter(prefix="/batches", tags=["batches"])
-
-
-def get_audit_service(session: AsyncSession = Depends(get_async_session)) -> AuditService:
-    return AuditService(session)
-
-
-def get_batch_service(
-    session: AsyncSession = Depends(get_async_session),
-    cache: CacheService = Depends(CacheService),
-    audit: AuditService = Depends(get_audit_service),
-) -> BatchService:
-    return BatchService(session, cache, audit)
 
 
 @router.get("", response_model=BatchListResponse)
