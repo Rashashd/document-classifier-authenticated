@@ -93,7 +93,7 @@ async def trigger_demo(
     # The classifier internally resizes to 224×224 anyway, so accuracy is unaffected.
     with Image.open(BytesIO(image_bytes)) as raw:
         converted = raw.convert("RGB")
-        converted.thumbnail((512, 512))
+        converted.thumbnail((224, 224))
         buf = BytesIO()
         converted.save(buf, format="PNG")
         image_bytes = buf.getvalue()
