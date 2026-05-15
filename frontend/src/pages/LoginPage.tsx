@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiClientError } from "@/api/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { ScanLine } from "lucide-react";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("reason") === "session_expired";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +71,9 @@ export function LoginPage() {
                 required
               />
             </div>
+            {sessionExpired && !error && (
+              <p className="text-sm text-amber-600">Your session has timed out. Please sign in again.</p>
+            )}
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
