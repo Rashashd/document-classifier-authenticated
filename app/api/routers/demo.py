@@ -69,7 +69,7 @@ def _pick_document() -> bytes:
 def _build_blob(request: Request) -> MinioBlobClient:
     vault: VaultClient = request.app.state.vault
     settings = request.app.state.settings
-    minio_creds: dict[str, Any] = vault.get_secret(settings.vault_minio_path)  # type: ignore[no-any-return]
+    minio_creds: dict[str, Any] = vault.get_secret(settings.vault_minio_path)
     blob = MinioBlobClient(
         endpoint=settings.minio_endpoint,
         access_key=minio_creds["access_key"],
@@ -91,11 +91,11 @@ async def trigger_demo(
 
     # Pre-resize to 512×512 so the worker downloads and decodes a smaller file.
     # The classifier internally resizes to 224×224 anyway, so accuracy is unaffected.
-    with Image.open(BytesIO(image_bytes)) as img:
-        img = img.convert("RGB")
-        img.thumbnail((512, 512))
+    with Image.open(BytesIO(image_bytes)) as raw:
+        converted = raw.convert("RGB")
+        converted.thumbnail((512, 512))
         buf = BytesIO()
-        img.save(buf, format="PNG")
+        converted.save(buf, format="PNG")
         image_bytes = buf.getvalue()
 
     filename = f"demo_{uuid.uuid4().hex[:8]}.png"

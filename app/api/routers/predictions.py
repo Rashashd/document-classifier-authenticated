@@ -91,7 +91,7 @@ async def get_prediction_overlay(
 
     vault: VaultClient = request.app.state.vault
     settings = request.app.state.settings
-    minio_creds: dict[str, Any] = vault.get_secret(settings.vault_minio_path)  # type: ignore[no-any-return]
+    minio_creds: dict[str, Any] = vault.get_secret(settings.vault_minio_path)
     blob = MinioBlobClient(
         endpoint=settings.minio_endpoint,
         access_key=minio_creds["access_key"],
