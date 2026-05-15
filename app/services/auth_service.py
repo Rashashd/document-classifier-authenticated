@@ -23,7 +23,7 @@ logger = structlog.get_logger(__name__)
 
 # Database adapter
 async def get_user_db(session: AsyncSession = Depends(get_async_session)) -> AsyncGenerator[Any, None]:
-    yield SQLAlchemyUserDatabase(session, User)
+    yield SQLAlchemyUserDatabase(session, User)  # type: ignore[arg-type]
 
 
 # User manager
@@ -67,7 +67,7 @@ bearer_transport = BearerTransport(tokenUrl="/auth/login")
 auth_backend = AuthenticationBackend(  # type: ignore[type-var]
     name="jwt",
     transport=bearer_transport,
-    get_strategy=get_jwt_strategy,
+    get_strategy=get_jwt_strategy,  # type: ignore[arg-type]
 )
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])  # type: ignore[type-var]

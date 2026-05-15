@@ -9,7 +9,6 @@ endpoints use :meth:`relabel_prediction` and the read methods.
 from __future__ import annotations
 
 import uuid
-from typing import Sequence
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +75,7 @@ class PredictionService:
         prediction = await self.repo.get(prediction_id)
         return PredictionRead.model_validate(prediction) if prediction else None
 
-    async def list_recent_predictions(self, skip: int = 0, limit: int = 100) -> tuple[Sequence[PredictionRead], int]:
+    async def list_recent_predictions(self, skip: int = 0, limit: int = 100) -> tuple[list[PredictionRead], int]:
         predictions = await self.repo.list_recent(skip, limit)
         total = await self.repo.count_all()
         return [PredictionRead.model_validate(p) for p in predictions], total
